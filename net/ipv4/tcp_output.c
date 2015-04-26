@@ -984,6 +984,15 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	if (likely((tcb->tcp_flags & TCPHDR_SYN) == 0))
 		tcp_ecn_send(sk, skb, tcp_header_size);
 
+	/*begin TCP-LTE*/
+	//do it before computing the checksum
+	if (likely(tcb->tcp_flags & TCPHDR_ACK) && (sysctl_tcp_lte == 1)) {
+		th->res1 = sysctl_tcp_prb/4; //the 4 unused bits 
+		th->cwr = (sysctl_tcp_prb/2)%2; //cwr bit follows 
+		th->ece = sysctl_tcp_prb%2; //ece bit follows the cwr bit
+	}
+	/*end TCP-LTE*/
+
 #ifdef CONFIG_TCP_MD5SIG
 	/* Calculate the MD5 hash, as we have all we need now */
 	if (md5) {
