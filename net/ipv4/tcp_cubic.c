@@ -207,6 +207,11 @@ static inline void bictcp_update(struct bictcp *ca, u32 cwnd, u32 acked)
 	u32 delta, bic_target, max_cnt;
 	u64 offs, t;
 
+    /*begin TCP-LTE*/
+    if (sysctl_tcp_tx == 1)
+        printk("the PRB utilization is %d in cubic\n", sysctl_tcp_prb);
+    /*end TCP-LTE*/
+
 	ca->ack_cnt += acked;	/* count the number of ACKed packets */
 
 	if (ca->last_cwnd == cwnd &&

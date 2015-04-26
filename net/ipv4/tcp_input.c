@@ -3457,6 +3457,13 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 	prior_fackets = tp->fackets_out;
 
+    /* begin TCP-LTE */
+    // assign the received res1 value to sysctl output
+    if (sysctl_tcp_tx == 1)
+        sysctl_tcp_prb = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece; 
+    //printk("the PRB utilization is %d\n", prb_tx);
+    /* end TCP-LTE */
+
 	/* ts_recent update must be made after we are sure that the packet
 	 * is in window.
 	 */

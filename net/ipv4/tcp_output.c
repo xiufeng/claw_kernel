@@ -986,7 +986,7 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 
 	/*begin TCP-LTE*/
 	//do it before computing the checksum
-	if (likely(tcb->tcp_flags & TCPHDR_ACK) && (sysctl_tcp_lte == 1)) {
+	if (likely(tcb->tcp_flags & TCPHDR_ACK) && (sysctl_tcp_lte == 1) && (sysctl_tcp_tx == 0)) {
 		th->res1 = sysctl_tcp_prb/4; //the 4 unused bits 
 		th->cwr = (sysctl_tcp_prb/2)%2; //cwr bit follows 
 		th->ece = sysctl_tcp_prb%2; //ece bit follows the cwr bit

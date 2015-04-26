@@ -289,6 +289,7 @@ int sysctl_tcp_autocorking __read_mostly = 1;
 /* begin TCP-LTE */
 int sysctl_tcp_prb = 0;
 int sysctl_tcp_lte = 0;
+int sysctl_tcp_tx = 0;
 /* end TCP-LTE */
 
 struct percpu_counter tcp_orphan_count;
