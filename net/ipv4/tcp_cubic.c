@@ -329,6 +329,9 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	}
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
+	/* TCP-LTE */
+        printk("hystart value is %d\n in cubic", hystart);
+	/* TCP-LTE */
 
 	tcp_cong_avoid_ai(tp, ca->cnt, acked);
 }

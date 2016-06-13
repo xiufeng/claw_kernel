@@ -146,9 +146,7 @@ static void bictcp_init(struct sock *sk)
 
 	/* TCP-LTE */
 	// turn off hybird start
-	if(sysctl_tcp_lte==1){
-		hystart = 0;
-	}
+	hystart = 0;
 	/* TCP-LTE */
 
 	if (hystart)
@@ -337,7 +335,6 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
     /* begin TCP-LTE */
-    if (sysctl_tcp_lte == 1) {
         // modify the value of the ca->cnt value
         // PRB = 0, we have value 2 (very fast 50% increase per RTT)
         // PRB = 50, we have value 2+tp->snd_cwnd (1 per RTT)
@@ -377,12 +374,7 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	//tp->snd_cwnd = min(tp->snd_cwnd, tp->snd_cwnd_clamp);
 
 	// output to log
-        printk("Hystart %d, PRB u %d in spring, CNT value %d, cwnd %d\n", hystart, sysctl_tcp_prb, ca->cnt, tp->snd_cwnd);
-    }
-    else{
-	// legacy way
-	tcp_cong_avoid_ai(tp, ca->cnt, acked);
-    }
+        printk("Hystart %d, PRB u %d, CNT value %d, cwnd %d in spring\n", hystart, sysctl_tcp_prb, ca->cnt, tp->snd_cwnd);
     /* end TCP-LTE */
 
 
