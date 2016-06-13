@@ -485,11 +485,13 @@ config TCP_CONG_CUBIC
 	among other techniques.
 	See http://www.csc.ncsu.edu/faculty/rhee/export/bitcp/cubic-paper.pdf
 
+#TCP-LTE
 config TCP_CONG_SPRING
 	tristate "TCP SPRING"
 	default y
 	---help---
-	TCP-LTE
+	TCP designed to run over LTE
+#TCP-LTE
 
 config TCP_CONG_WESTWOOD
 	tristate "TCP Westwood+"
@@ -634,8 +636,10 @@ choice
 	config DEFAULT_CUBIC
 		bool "Cubic" if TCP_CONG_CUBIC=y
 
+	#TCP-LTE
 	config DEFAULT_SPRING
 		bool "Spring" if TCP_CONG_SPRING=y
+	#TCP-LTE
 
 	config DEFAULT_HTCP
 		bool "Htcp" if TCP_CONG_HTCP=y
@@ -670,7 +674,9 @@ config DEFAULT_TCP_CONG
 	string
 	default "bic" if DEFAULT_BIC
 	default "cubic" if DEFAULT_CUBIC
+	# TCP-LTE
 	default "spring" if DEFAULT_SPRING
+	# TCP-LTE
 	default "htcp" if DEFAULT_HTCP
 	default "hybla" if DEFAULT_HYBLA
 	default "vegas" if DEFAULT_VEGAS
