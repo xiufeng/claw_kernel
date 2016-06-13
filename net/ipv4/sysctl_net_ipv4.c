@@ -286,14 +286,6 @@ static struct ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
 	},
-	//on-off switch of sender side control
-	{
-		.procname	= "tcp_tx",
-		.data		= &sysctl_tcp_tx,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec
-	},
     /* end TCP-LTE */
 	{
 		.procname	= "tcp_retrans_collapse",

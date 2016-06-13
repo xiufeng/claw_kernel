@@ -207,11 +207,6 @@ static inline void bictcp_update(struct bictcp *ca, u32 cwnd, u32 acked)
 	u32 delta, bic_target, max_cnt;
 	u64 offs, t;
 
-    /*begin TCP-LTE*/
-    if (sysctl_tcp_tx == 1)
-        printk("the PRB utilization is %d in cubic\n", sysctl_tcp_prb);
-    /*end TCP-LTE*/
-
 	ca->ack_cnt += acked;	/* count the number of ACKed packets */
 
 	if (ca->last_cwnd == cwnd &&
@@ -333,16 +328,6 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 			return;
 	}
 	bictcp_update(ca, tp->snd_cwnd, acked);
-    /* begin TCP-LTE */
-    if ((sysctl_tcp_lte == 1) && (sysctl_tcp_tx == 1)) {
-        // modify the value of the ca->cnt value
-        // PRB = 0, we have value 50 (very fast 2% increase per RTT)
-        // PRB = 63, we have value 20+tp->snd_cwnd (1 per RTT)
-        // ineffective, always 50!: ca->cnt = 50 + (tp->snd_cwnd/64)*sysctl_tcp_prb;
-        ca->cnt = 50 + tp->snd_cwnd*100*sysctl_tcp_prb * sysctl_tcp_prb * sysctl_tcp_prb/(63*63*63);
-        printk("the CNT value is %d\n", ca->cnt);
-    }
-    /* end TCP-LTE */
 
 
 	tcp_cong_avoid_ai(tp, ca->cnt, acked);
