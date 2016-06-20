@@ -1929,13 +1929,16 @@ void tcp_enter_loss(struct sock *sk)
 	bool new_recovery = false;
 	bool is_reneg;			/* is receiver reneging on SACKs? */
 
+
 	/* Reduce ssthresh if it has not yet been made inside this window. */
 	if (icsk->icsk_ca_state <= TCP_CA_Disorder ||
 	    !after(tp->high_seq, tp->snd_una) ||
 	    (icsk->icsk_ca_state == TCP_CA_Loss && !icsk->icsk_retransmits)) {
 		new_recovery = true;
 		tp->prior_ssthresh = tcp_current_ssthresh(sk);
+
 		tp->snd_ssthresh = icsk->icsk_ca_ops->ssthresh(sk);
+
 		tcp_ca_event(sk, CA_EVENT_LOSS);
 		tcp_init_undo(tp);
 	}
@@ -2504,6 +2507,7 @@ static void tcp_init_cwnd_reduction(struct sock *sk)
 	tp->prior_cwnd = tp->snd_cwnd;
 	tp->prr_delivered = 0;
 	tp->prr_out = 0;
+
 	tp->snd_ssthresh = inet_csk(sk)->icsk_ca_ops->ssthresh(sk);
 	tcp_ecn_queue_cwr(tp);
 }
@@ -2553,7 +2557,11 @@ void tcp_enter_cwr(struct sock *sk)
 	tp->prior_ssthresh = 0;
 	if (inet_csk(sk)->icsk_ca_state < TCP_CA_CWR) {
 		tp->undo_marker = 0;
+
+		printk("before cwr update\n");
 		tcp_init_cwnd_reduction(sk);
+		printk("after cwr update\n");
+
 		tcp_set_ca_state(sk, TCP_CA_CWR);
 	}
 }
@@ -2687,7 +2695,9 @@ static void tcp_enter_recovery(struct sock *sk, bool ece_ack)
 	if (inet_csk(sk)->icsk_ca_state < TCP_CA_CWR) {
 		if (!ece_ack)
 			tp->prior_ssthresh = tcp_current_ssthresh(sk);
+		printk("before reocvery update\n");
 		tcp_init_cwnd_reduction(sk);
+		printk("after reocvery update\n");
 	}
 	tcp_set_ca_state(sk, TCP_CA_Recovery);
 }
@@ -3389,7 +3399,11 @@ static void tcp_process_tlp_ack(struct sock *sk, u32 ack, int flag)
 		/* ACK advances: there was a loss, so reduce cwnd. Reset
 		 * tlp_high_seq in tcp_init_cwnd_reduction()
 		 */
+
+		printk("before tlp update\n");
 		tcp_init_cwnd_reduction(sk);
+		printk("after tlp update\n");
+
 		tcp_set_ca_state(sk, TCP_CA_CWR);
 		tcp_end_cwnd_reduction(sk);
 		tcp_try_keep_open(sk);

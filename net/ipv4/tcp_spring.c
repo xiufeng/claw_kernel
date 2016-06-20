@@ -146,7 +146,7 @@ static void bictcp_init(struct sock *sk)
 
 	/* TCP-LTE */
 	// turn off hybird start
-	hystart = 0;
+        printk("spring init with init weight %d\n", ca->cnt);
 	/* TCP-LTE */
 
 	if (hystart)
@@ -325,6 +325,10 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if (!tcp_is_cwnd_limited(sk))
 		return;
 
+        /* TCP-LTE */
+	// bypass slow start (may need to make a conditioned slow start
+	// for now users)
+	/*
 	if (tp->snd_cwnd <= tp->snd_ssthresh) {
 		if (hystart && after(ack, ca->end_seq))
 			bictcp_hystart_reset(sk);
@@ -332,6 +336,9 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 		if (!acked)
 			return;
 	}
+	*/
+        /* TCP-LTE */
+
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
     /* begin TCP-LTE */
@@ -374,7 +381,7 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	//tp->snd_cwnd = min(tp->snd_cwnd, tp->snd_cwnd_clamp);
 
 	// output to log
-        printk("Hystart %d, PRB u %d, CNT value %d, cwnd %d in spring\n", hystart, sysctl_tcp_prb, ca->cnt, tp->snd_cwnd);
+        printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in spring\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
     /* end TCP-LTE */
 
 
@@ -396,6 +403,10 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 		ca->last_max_cwnd = tp->snd_cwnd;
 
 	ca->loss_cwnd = tp->snd_cwnd;
+
+	/*TCP-LTE*/
+	printk("recomputing ssthresh now\n");
+	/*TCP-LTE*/
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);
 }
