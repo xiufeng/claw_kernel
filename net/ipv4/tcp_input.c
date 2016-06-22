@@ -2558,9 +2558,7 @@ void tcp_enter_cwr(struct sock *sk)
 	if (inet_csk(sk)->icsk_ca_state < TCP_CA_CWR) {
 		tp->undo_marker = 0;
 
-		printk("before cwr update\n");
 		tcp_init_cwnd_reduction(sk);
-		printk("after cwr update\n");
 
 		tcp_set_ca_state(sk, TCP_CA_CWR);
 	}
@@ -2695,9 +2693,7 @@ static void tcp_enter_recovery(struct sock *sk, bool ece_ack)
 	if (inet_csk(sk)->icsk_ca_state < TCP_CA_CWR) {
 		if (!ece_ack)
 			tp->prior_ssthresh = tcp_current_ssthresh(sk);
-		printk("before reocvery update\n");
 		tcp_init_cwnd_reduction(sk);
-		printk("after reocvery update\n");
 	}
 	tcp_set_ca_state(sk, TCP_CA_Recovery);
 }
@@ -2804,22 +2800,33 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 				    (tcp_fackets_out(tp) > tp->reordering));
 	int fast_rexmit = 0;
 
+
+	/* TCP-LTE */
+	printk("beginning of fast retrans alert, cwnd %d\n",tp->snd_cwnd);
+	/* TCP-LTE */
+
+
 	if (WARN_ON(!tp->packets_out && tp->sacked_out))
 		tp->sacked_out = 0;
 	if (WARN_ON(!tp->sacked_out && tp->fackets_out))
 		tp->fackets_out = 0;
+
 
 	/* Now state machine starts.
 	 * A. ECE, hence prohibit cwnd undoing, the reduction is required. */
 	if (flag & FLAG_ECE)
 		tp->prior_ssthresh = 0;
 
+
 	/* B. In all the states check for reneging SACKs. */
-	if (tcp_check_sack_reneging(sk, flag))
+	if (tcp_check_sack_reneging(sk, flag)){
 		return;
+	}
+
 
 	/* C. Check consistency of the current state. */
 	tcp_verify_left_out(tp);
+
 
 	/* D. Check state exit conditions. State can be terminated
 	 *    when high_seq is ACKed. */
@@ -2840,12 +2847,29 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 		case TCP_CA_Recovery:
 			if (tcp_is_reno(tp))
 				tcp_reset_reno_sack(tp);
-			if (tcp_try_undo_recovery(sk))
+			if (tcp_try_undo_recovery(sk)){
 				return;
-			tcp_end_cwnd_reduction(sk);
+			}
+			/* TCP-LTE */
+			//tcp_end_cwnd_reduction(sk);
+			/* TCP-LTE */
+
+			/* TCP-LTE */
+			if (sysctl_tcp_lte==0){
+				printk("legacy TCP, cwnd before end reduction %d\n",tp->snd_cwnd);
+				tcp_end_cwnd_reduction(sk);
+				printk("legacy TCP, cwnd before end reduction %d\n",tp->snd_cwnd);
+			}
+			else{
+				printk("TCP spring bypass the end reduction, cwnd %d\n",tp->snd_cwnd);
+			}
+
+
+
 			break;
 		}
 	}
+
 
 	/* E. Process state. */
 	switch (icsk->icsk_ca_state) {
@@ -2854,8 +2878,9 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 			if (tcp_is_reno(tp) && is_dupack)
 				tcp_add_reno_sack(sk);
 		} else {
-			if (tcp_try_undo_partial(sk, acked, prior_unsacked))
+			if (tcp_try_undo_partial(sk, acked, prior_unsacked)){
 				return;
+			}
 			/* Partial ACK arrived. Force fast retransmit. */
 			do_lost = tcp_is_reno(tp) ||
 				  tcp_fackets_out(tp) > tp->reordering;
@@ -2867,8 +2892,9 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 		break;
 	case TCP_CA_Loss:
 		tcp_process_loss(sk, flag, is_dupack);
-		if (icsk->icsk_ca_state != TCP_CA_Open)
+		if (icsk->icsk_ca_state != TCP_CA_Open){
 			return;
+		}
 		/* Fall through to processing in Open state. */
 	default:
 		if (tcp_is_reno(tp)) {
@@ -2904,7 +2930,24 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 
 	if (do_lost)
 		tcp_update_scoreboard(sk, fast_rexmit);
-	tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
+
+	/* TCP-LTE */
+	//tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
+	/* TCP-LTE */
+
+	/* TCP-LTE */
+	if(sysctl_tcp_lte==0){
+		printk("legacy TCP, cwnd before reduction %d\n",tp->snd_cwnd);
+
+		tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
+
+		printk("legacy TCP, cwnd after reduction %d\n",tp->snd_cwnd);
+	}
+	else{
+		printk("TCP Spring, bypass reduction with win %d\n",tp->snd_cwnd);
+	}
+	/* TCP-LTE */
+
 	tcp_xmit_retransmit_queue(sk);
 }
 
@@ -3400,9 +3443,7 @@ static void tcp_process_tlp_ack(struct sock *sk, u32 ack, int flag)
 		 * tlp_high_seq in tcp_init_cwnd_reduction()
 		 */
 
-		printk("before tlp update\n");
 		tcp_init_cwnd_reduction(sk);
-		printk("after tlp update\n");
 
 		tcp_set_ca_state(sk, TCP_CA_CWR);
 		tcp_end_cwnd_reduction(sk);
@@ -3540,6 +3581,13 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 	if (tcp_ack_is_dubious(sk, flag)) {
 		is_dupack = !(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP));
+
+
+		/* TCP-LTE */
+		printk("entry of fast retrans alert in dubious ack, cwnd %d\n",tp->snd_cwnd);
+		/* TCP-LTE */
+
+
 		tcp_fastretrans_alert(sk, acked, prior_unsacked,
 				      is_dupack, flag);
 	}
@@ -3559,9 +3607,10 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 no_queue:
 	/* If data was DSACKed, see if we can undo a cwnd reduction. */
-	if (flag & FLAG_DSACKING_ACK)
+	if (flag & FLAG_DSACKING_ACK){
 		tcp_fastretrans_alert(sk, acked, prior_unsacked,
 				      is_dupack, flag);
+	}
 	/* If this ack opens up a zero window, clear backoff.  It was
 	 * being used to time the probes, and is probably far higher than
 	 * it needs to be for normal retransmission.

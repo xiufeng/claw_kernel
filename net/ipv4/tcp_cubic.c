@@ -330,7 +330,7 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
 	/* TCP-LTE */
-        //printk("hystart value is %d\n in cubic", hystart);
+   printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in cubic\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
 	/* TCP-LTE */
 
 	tcp_cong_avoid_ai(tp, ca->cnt, acked);
@@ -351,6 +351,10 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 		ca->last_max_cwnd = tp->snd_cwnd;
 
 	ca->loss_cwnd = tp->snd_cwnd;
+
+/* TCP-LTE */
+printk("recomputing ssthresh in cubic\n");
+/* TCP-LTE */
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);
 }

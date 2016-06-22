@@ -288,6 +288,7 @@ int sysctl_tcp_autocorking __read_mostly = 1;
 
 /* begin TCP-LTE */
 int sysctl_tcp_prb = 51;//a safe intial value
+int sysctl_tcp_lte = 0;//use our own rate reduction
 /* end TCP-LTE */
 
 struct percpu_counter tcp_orphan_count;
