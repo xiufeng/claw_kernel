@@ -321,19 +321,35 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 		return;
 
 	if (tp->snd_cwnd <= tp->snd_ssthresh) {
-		if (hystart && after(ack, ca->end_seq))
+		if (hystart && after(ack, ca->end_seq)){
 			bictcp_hystart_reset(sk);
+
+			/* TCP-LTE */
+			if(sysctl_tcp_see==1)
+				printk("hystart reset win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
+			/* TCP-LTE */
+		}
 		acked = tcp_slow_start(tp, acked);
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1) 
+			printk("slow start win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
+		/* TCP-LTE */
+
+
 		if (!acked)
 			return;
 	}
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
 	/* TCP-LTE */
-   printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in cubic\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
+   //printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in cubic\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
 	/* TCP-LTE */
 
 	tcp_cong_avoid_ai(tp, ca->cnt, acked);
+
+	if(sysctl_tcp_see==1)
+   		printk("tcp_cong_avoid_ai win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
 }
 
 static u32 bictcp_recalc_ssthresh(struct sock *sk)
@@ -353,7 +369,7 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 	ca->loss_cwnd = tp->snd_cwnd;
 
 /* TCP-LTE */
-printk("recomputing ssthresh in cubic\n");
+//printk("recomputing ssthresh in cubic\n");
 /* TCP-LTE */
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);

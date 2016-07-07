@@ -75,6 +75,12 @@ static void tcp_event_new_data_sent(struct sock *sk, const struct sk_buff *skb)
 	struct tcp_sock *tp = tcp_sk(sk);
 	unsigned int prior_packets = tp->packets_out;
 
+
+	/* TCP-LTE */
+	if(sysctl_tcp_see==1)
+		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest));
+	/* TCP-LTE */
+
 	tcp_advance_send_head(sk, skb);
 	tp->snd_nxt = TCP_SKB_CB(skb)->end_seq;
 
@@ -155,6 +161,13 @@ static void tcp_cwnd_restart(struct sock *sk, const struct dst_entry *dst)
 	tp->snd_cwnd = max(cwnd, restart_cwnd);
 	tp->snd_cwnd_stamp = tcp_time_stamp;
 	tp->snd_cwnd_used = 0;
+
+	/* TCP-LTE */
+	//this does not have much impact
+	if(sysctl_tcp_see==1)
+		printk("tcp_cwnd_restart drop %d\n",tp->snd_cwnd);
+	/* TCP-LTE */
+
 }
 
 /* Congestion state accounting after a packet has been sent. */
@@ -1455,6 +1468,14 @@ static void tcp_cwnd_application_limited(struct sock *sk)
 		tp->snd_cwnd_used = 0;
 	}
 	tp->snd_cwnd_stamp = tcp_time_stamp;
+
+	/* TCP-LTE */
+	//this did not happen
+	//if(sysctl_tcp_see==1)
+	//	printk("tcp_cwnd_application_limited drop %d\n",tp->snd_cwnd);
+	/* TCP-LTE */
+
+
 }
 
 static void tcp_cwnd_validate(struct sock *sk, bool is_cwnd_limited)
@@ -1947,6 +1968,14 @@ static int tcp_mtu_probe(struct sock *sk)
 		icsk->icsk_mtup.probe_size = tcp_mss_to_mtu(sk, nskb->len);
 		tp->mtu_probe.probe_seq_start = TCP_SKB_CB(nskb)->seq;
 		tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
+
+		/* TCP-LTE */
+		//this did not happen
+		//if(sysctl_tcp_see==1)
+		//	printk("tcp_mtu_probe drop %d\n",tp->snd_cwnd);
+		/* TCP-LTE */
+
+
 
 		return 1;
 	}

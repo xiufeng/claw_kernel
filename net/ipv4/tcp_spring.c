@@ -342,19 +342,19 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
     /* begin TCP-LTE */
-        // modify the value of the ca->cnt value
-        // PRB = 0, we have value 2 (very fast 50% increase per RTT)
-        // PRB = 50, we have value 2+tp->snd_cwnd (1 per RTT)
-        // PRB = 51, we have value tp->snd_cwnd (-1 per RTT)
-        // PRB = 63, we have value 2 (-50% per RTT)
-        //ca->cnt = 50 + tp->snd_cwnd*100*sysctl_tcp_prb * sysctl_tcp_prb * sysctl_tcp_prb/(63*63*63);
+	// fast convergence
+	// the fastest is as fast as slow start
+	//FIXME: natural limit of tcp increaisng speed
 	int slow_thresh = 60;
-	int init_weight = 2;
-
-	if (sysctl_tcp_prb<=slow_thresh)
-		ca->cnt = init_weight + tp->snd_cwnd * sysctl_tcp_prb / slow_thresh;
-	else
-		ca->cnt = init_weight + tp->snd_cwnd*(63-sysctl_tcp_prb)/(63-slow_thresh);
+	int init_thresh = 30;
+	int init_weight = 1;
+	// when the increasing speed is more than one
+	if (sysctl_tcp_prb<init_thresh)
+		ca->cnt = init_weight;
+	else if ((sysctl_tcp_prb<=slow_thresh) && (sysctl_tcp_prb>=init_thresh))
+		ca->cnt = init_weight + tp->snd_cwnd * (sysctl_tcp_prb-init_thresh) / (slow_thresh-init_thresh);
+	else//slow decrease
+		ca->cnt = 50+tp->snd_cwnd;
 
 	/* If credits accumulated at a higher w, apply them gently now. */
 	if (tp->snd_cwnd_cnt >= ca->cnt) {
@@ -371,17 +371,21 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 		tp->snd_cwnd_cnt -= delta * ca->cnt;
 
 		if (sysctl_tcp_prb<=slow_thresh)
-			tp->snd_cwnd += delta;
+			tp->snd_cwnd += delta; // delta is just 1
 		else
 			tp->snd_cwnd -= delta;
 	}
+	// give it a lower bound to avoid total TCP failure
+	tp->snd_cwnd = max(tp->snd_cwnd, 20);
+
+	// output to log
+	printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in spring\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
 
 
 	// TODO: understand what it is doing
 	//tp->snd_cwnd = min(tp->snd_cwnd, tp->snd_cwnd_clamp);
 
-	// output to log
-        printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in spring\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
+
     /* end TCP-LTE */
 
 

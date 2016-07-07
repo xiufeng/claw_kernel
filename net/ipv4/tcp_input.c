@@ -2802,7 +2802,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 
 
 	/* TCP-LTE */
-	printk("beginning of fast retrans alert, cwnd %d\n",tp->snd_cwnd);
+	//printk("beginning of fast retrans alert, cwnd %d\n",tp->snd_cwnd);
 	/* TCP-LTE */
 
 
@@ -2850,11 +2850,18 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 			if (tcp_try_undo_recovery(sk)){
 				return;
 			}
+
+			tcp_end_cwnd_reduction(sk);
+
 			/* TCP-LTE */
-			//tcp_end_cwnd_reduction(sk);
+			//this did not happen
+			//if(sysctl_tcp_see==1)
+			//	printk("tcp_end_cwnd_reduction drop %d\n",tp->snd_cwnd);
+
 			/* TCP-LTE */
 
 			/* TCP-LTE */
+			/*
 			if (sysctl_tcp_lte==0){
 				printk("legacy TCP, cwnd before end reduction %d\n",tp->snd_cwnd);
 				tcp_end_cwnd_reduction(sk);
@@ -2863,6 +2870,8 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 			else{
 				printk("TCP spring bypass the end reduction, cwnd %d\n",tp->snd_cwnd);
 			}
+			*/
+			/* TCP-LTE */
 
 
 
@@ -2931,11 +2940,17 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 	if (do_lost)
 		tcp_update_scoreboard(sk, fast_rexmit);
 
+	tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
+
 	/* TCP-LTE */
-	//tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
+	//this did not happen
+	//if(sysctl_tcp_see==1)
+	//	printk("tcp_cwnd_reduction drop %d\n",tp->snd_cwnd);
+
 	/* TCP-LTE */
 
 	/* TCP-LTE */
+	/*
 	if(sysctl_tcp_lte==0){
 		printk("legacy TCP, cwnd before reduction %d\n",tp->snd_cwnd);
 
@@ -2946,6 +2961,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 	else{
 		printk("TCP Spring, bypass reduction with win %d\n",tp->snd_cwnd);
 	}
+	*/
 	/* TCP-LTE */
 
 	tcp_xmit_retransmit_queue(sk);
@@ -3480,6 +3496,16 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 	int acked = 0; /* Number of packets newly acked */
 	long sack_rtt_us = -1L;
 
+
+
+	/* TCP-LTE */
+	u32 source_port = ntohs(tcp_hdr(skb)->source);
+	u32 dest_port = ntohs(tcp_hdr(skb)->dest);
+	if(sysctl_tcp_see==1)
+		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port);
+	/* TCP-LTE */
+
+
 	/* We very likely will need to access write queue head. */
 	prefetchw(sk->sk_write_queue.next);
 
@@ -3512,10 +3538,12 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 	prior_fackets = tp->fackets_out;
 
-    /* begin TCP-LTE */
-    // assign the received res1 value to sysctl output
-    sysctl_tcp_prb = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece; 
-    /* end TCP-LTE */
+	/* begin TCP-LTE */
+	// assign the received res1 value to sysctl output
+	if (sysctl_tcp_lte==1){
+	sysctl_tcp_prb = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece; 
+	}
+	/* end TCP-LTE */
 
 	/* ts_recent update must be made after we are sure that the packet
 	 * is in window.
@@ -3584,7 +3612,7 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 
 		/* TCP-LTE */
-		printk("entry of fast retrans alert in dubious ack, cwnd %d\n",tp->snd_cwnd);
+		//printk("entry of fast retrans alert in dubious ack, cwnd %d\n",tp->snd_cwnd);
 		/* TCP-LTE */
 
 
