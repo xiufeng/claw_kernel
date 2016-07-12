@@ -366,7 +366,9 @@ u32 tcp_slow_start(struct tcp_sock *tp, u32 acked)
 
 	if (cwnd > tp->snd_ssthresh)
 		cwnd = tp->snd_ssthresh + 1;
+
 	acked -= cwnd - tp->snd_cwnd;
+
 	tp->snd_cwnd = min(cwnd, tp->snd_cwnd_clamp);
 
 	return acked;

@@ -144,11 +144,6 @@ static void bictcp_init(struct sock *sk)
 	bictcp_reset(ca);
 	ca->loss_cwnd = 0;
 
-	/* TCP-LTE */
-	// turn off hybird start
-        printk("spring init with init weight %d\n", ca->cnt);
-	/* TCP-LTE */
-
 	if (hystart)
 		bictcp_hystart_reset(sk);
 
@@ -325,71 +320,39 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if (!tcp_is_cwnd_limited(sk))
 		return;
 
-        /* TCP-LTE */
-	// bypass slow start (may need to make a conditioned slow start
-	// for now users)
-	/*
-	if (tp->snd_cwnd <= tp->snd_ssthresh) {
+	//if (tp->snd_cwnd <= tp->snd_ssthresh) {
+	//slow start when we have slow PRB
+	if ((sysctl_tcp_prb<0.6) && (sysctl_tcp_prb>0)) {
 		if (hystart && after(ack, ca->end_seq))
 			bictcp_hystart_reset(sk);
+		
 		acked = tcp_slow_start(tp, acked);
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1) 
+			printk("slow start win %d, ssthresh %d, acked %d, prb %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, sysctl_tcp_prb);
+		/* TCP-LTE */
+
+
 		if (!acked)
 			return;
 	}
-	*/
-        /* TCP-LTE */
-
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
-    /* begin TCP-LTE */
-	// fast convergence
-	// the fastest is as fast as slow start
-	//FIXME: natural limit of tcp increaisng speed
-	int slow_thresh = 60;
-	int init_thresh = 30;
-	int init_weight = 1;
-	// when the increasing speed is more than one
-	if (sysctl_tcp_prb<init_thresh)
-		ca->cnt = init_weight;
-	else if ((sysctl_tcp_prb<=slow_thresh) && (sysctl_tcp_prb>=init_thresh))
-		ca->cnt = init_weight + tp->snd_cwnd * (sysctl_tcp_prb-init_thresh) / (slow_thresh-init_thresh);
-	else//slow decrease
-		ca->cnt = 50+tp->snd_cwnd;
 
-	/* If credits accumulated at a higher w, apply them gently now. */
-	if (tp->snd_cwnd_cnt >= ca->cnt) {
-		tp->snd_cwnd_cnt = 0;
-		tp->snd_cwnd++;
+	tcp_cong_avoid_ai(tp, ca->cnt, acked);
+
+	/* TCP-LTE */
+	// manually set the window
+	if(sysctl_tcp_rate!=0){
+		tp->snd_cwnd = sysctl_tcp_rate;
+		tp->snd_ssthresh = sysctl_tcp_rate; 
+		printk("manually set win %d\n", tp->snd_cwnd);
 	}
 
-	// increase the window by one if we accumulate more acks than the weight
-	// decrease by one if the utilization is too high
-	tp->snd_cwnd_cnt += acked;
-	if (tp->snd_cwnd_cnt >= ca->cnt) {
-		u32 delta = tp->snd_cwnd_cnt / ca->cnt;
-
-		tp->snd_cwnd_cnt -= delta * ca->cnt;
-
-		if (sysctl_tcp_prb<=slow_thresh)
-			tp->snd_cwnd += delta; // delta is just 1
-		else
-			tp->snd_cwnd -= delta;
-	}
-	// give it a lower bound to avoid total TCP failure
-	tp->snd_cwnd = max(tp->snd_cwnd, 20);
-
-	// output to log
-	printk("PRB %d, CNT %d, cwnd %d, snd_ssthresh %d in spring\n", sysctl_tcp_prb, ca->cnt, tp->snd_cwnd, tp->snd_ssthresh);
-
-
-	// TODO: understand what it is doing
-	//tp->snd_cwnd = min(tp->snd_cwnd, tp->snd_cwnd_clamp);
-
-
-    /* end TCP-LTE */
-
-
-	//tcp_cong_avoid_ai(tp, ca->cnt, acked);
+	if(sysctl_tcp_see==1)
+   		printk("tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
+	/* TCP-LTE */
 }
 
 static u32 bictcp_recalc_ssthresh(struct sock *sk)
@@ -408,9 +371,9 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 
 	ca->loss_cwnd = tp->snd_cwnd;
 
-	/*TCP-LTE*/
-	printk("recomputing ssthresh now\n");
-	/*TCP-LTE*/
+/* TCP-LTE */
+//printk("recomputing ssthresh in spring\n");
+/* TCP-LTE */
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);
 }

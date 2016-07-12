@@ -235,6 +235,7 @@ extern int sysctl_tcp_sack;
 extern int sysctl_tcp_prb;
 extern int sysctl_tcp_lte;
 extern int sysctl_tcp_see;
+extern int sysctl_tcp_rate;
 /* end TCP-LTE */
 extern int sysctl_tcp_fin_timeout;
 extern int sysctl_tcp_keepalive_time;

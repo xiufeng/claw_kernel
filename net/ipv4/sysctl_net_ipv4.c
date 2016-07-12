@@ -294,6 +294,14 @@ static struct ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
 	},
+	// our own window
+	{
+		.procname	= "tcp_rate",
+		.data		= &sysctl_tcp_rate,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
+	},
     /* end TCP-LTE */
 	{
 		.procname	= "tcp_retrans_collapse",
