@@ -2851,26 +2851,20 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 				return;
 			}
 
-			tcp_end_cwnd_reduction(sk);
-
 			/* TCP-LTE */
-			//this did not happen
-			//if(sysctl_tcp_see==1)
-			//	printk("tcp_end_cwnd_reduction drop %d\n",tp->snd_cwnd);
-
+			//tcp_end_cwnd_reduction(sk);
 			/* TCP-LTE */
 
+
 			/* TCP-LTE */
-			/*
-			if (sysctl_tcp_lte==0){
-				printk("legacy TCP, cwnd before end reduction %d\n",tp->snd_cwnd);
+			if (sysctl_tcp_rate==0){
 				tcp_end_cwnd_reduction(sk);
-				printk("legacy TCP, cwnd before end reduction %d\n",tp->snd_cwnd);
 			}
 			else{
-				printk("TCP spring bypass the end reduction, cwnd %d\n",tp->snd_cwnd);
+				tp->snd_cwnd = sysctl_tcp_rate; 
+				if(sysctl_tcp_see==1)
+					printk("TCP fixed window, bypass the end reduction, cwnd %d\n",tp->snd_cwnd);
 			}
-			*/
 			/* TCP-LTE */
 
 
@@ -2940,28 +2934,19 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 	if (do_lost)
 		tcp_update_scoreboard(sk, fast_rexmit);
 
-	tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
-
 	/* TCP-LTE */
-	//this did not happen
-	//if(sysctl_tcp_see==1)
-	//	printk("tcp_cwnd_reduction drop %d\n",tp->snd_cwnd);
-
+	//tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
 	/* TCP-LTE */
 
 	/* TCP-LTE */
-	/*
-	if(sysctl_tcp_lte==0){
-		printk("legacy TCP, cwnd before reduction %d\n",tp->snd_cwnd);
-
+	if(sysctl_tcp_rate==0){
 		tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
-
-		printk("legacy TCP, cwnd after reduction %d\n",tp->snd_cwnd);
 	}
 	else{
-		printk("TCP Spring, bypass reduction with win %d\n",tp->snd_cwnd);
+		tp->snd_cwnd = sysctl_tcp_rate;
+		if(sysctl_tcp_see==1)
+			printk("Fixed window, bypass reduction with win %d\n",tp->snd_cwnd);
 	}
-	*/
 	/* TCP-LTE */
 
 	tcp_xmit_retransmit_queue(sk);
@@ -3024,7 +3009,13 @@ static void tcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 {
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 
+	/* TCP-LTE */
+	//printk("congestion avoidance entry, name %s\n", icsk->icsk_ca_ops->name);
+	/* TCP-LTE */
+
 	icsk->icsk_ca_ops->cong_avoid(sk, ack, acked);
+
+
 	tcp_sk(sk)->snd_cwnd_stamp = tcp_time_stamp;
 }
 
@@ -3499,10 +3490,26 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 
 	/* TCP-LTE */
+	if(sysctl_tcp_rate!=0){
+		tp->snd_cwnd = sysctl_tcp_rate;
+		if(sysctl_tcp_see==1)
+			printk("enforce fixed window %d\n", tp->snd_cwnd);
+	}
+
+	// the window adding idea
+	if(sysctl_tcp_add>0){
+		tp->snd_cwnd += sysctl_tcp_add;
+		if(sysctl_tcp_see==1)
+			printk("new window is %d after adding %d\n", tp->snd_cwnd, sysctl_tcp_add);
+		
+		// we can only add once until the next update
+		sysctl_tcp_add = 0;
+	}
+
 	u32 source_port = ntohs(tcp_hdr(skb)->source);
 	u32 dest_port = ntohs(tcp_hdr(skb)->dest);
 	if(sysctl_tcp_see==1)
-		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port);
+		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, prb %d, rtt %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, sysctl_tcp_prb, tp->srtt_us);
 	/* TCP-LTE */
 
 
@@ -3540,7 +3547,16 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 	/* begin TCP-LTE */
 	// assign the received res1 value to sysctl output
-	sysctl_tcp_prb = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece; 
+	// we do not want the 0 value in other unmodified tcp flow destory our prb u
+	int prb_tmp = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece;
+	//if(sysctl_tcp_see==1)
+	//	printk("prb_temp %d, dest port %d, ack %d\n",prb_tmp, dest_port, tcp_hdr(skb)->ack);
+	//if((prb_tmp!=0) && ((dest_port==443)||(dest_port==80))){
+	if(prb_tmp!=0){
+		sysctl_tcp_prb = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece; 
+	//	if(sysctl_tcp_see==1)
+	//		printk("weighted ack, cwnd %d, prb %d\n",tp->snd_cwnd, sysctl_tcp_prb);
+	}
 	/* end TCP-LTE */
 
 	/* ts_recent update must be made after we are sure that the packet

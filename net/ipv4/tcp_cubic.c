@@ -326,14 +326,14 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 
 			/* TCP-LTE */
 			if(sysctl_tcp_see==1)
-				printk("hystart reset win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
+				printk("cubic hystart reset win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
 			/* TCP-LTE */
 		}
 		acked = tcp_slow_start(tp, acked);
 
 		/* TCP-LTE */
 		if(sysctl_tcp_see==1) 
-			printk("slow start win %d, ssthresh %d, acked %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked);
+			printk("cubic slow start win %d, ssthresh %d, acked %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked);
 		/* TCP-LTE */
 
 
@@ -354,7 +354,7 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	}
 
 	if(sysctl_tcp_see==1)
-   		printk("tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
+   		printk("cubic tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
 	/* TCP-LTE */
 }
 
@@ -374,9 +374,9 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 
 	ca->loss_cwnd = tp->snd_cwnd;
 
-/* TCP-LTE */
-//printk("recomputing ssthresh in cubic\n");
-/* TCP-LTE */
+	/* TCP-LTE */
+	printk("recomputing ssthresh to %d in cubic\n", max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U));
+	/* TCP-LTE */
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);
 }
@@ -418,6 +418,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 						 LINUX_MIB_TCPHYSTARTTRAINCWND,
 						 tp->snd_cwnd);
 				tp->snd_ssthresh = tp->snd_cwnd;
+
+			/* TCP-LTE */
+			printk("cubic hystart acktrain update ssthresh %d\n", tp->snd_ssthresh);
+			/* TCP-LTE */
 			}
 		}
 	}
@@ -430,6 +434,13 @@ static void hystart_update(struct sock *sk, u32 delay)
 
 			ca->sample_cnt++;
 		} else {
+
+			/* TCP-LTE */
+			if(sysctl_tcp_see)
+				printk("hy slow start, local min %d, global min %d, delay thresh %d\n", ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
+			/* TCP-LTE */
+
+
 			if (ca->curr_rtt > ca->delay_min +
 			    HYSTART_DELAY_THRESH(ca->delay_min >> 3)) {
 				ca->found |= HYSTART_DELAY;
@@ -439,6 +450,11 @@ static void hystart_update(struct sock *sk, u32 delay)
 						 LINUX_MIB_TCPHYSTARTDELAYCWND,
 						 tp->snd_cwnd);
 				tp->snd_ssthresh = tp->snd_cwnd;
+
+				/* TCP-LTE */
+				if(sysctl_tcp_see)
+					printk("cubic hystart hydelay update ssthresh %d\n", tp->snd_ssthresh);
+				/* TCP-LTE */
 			}
 		}
 	}

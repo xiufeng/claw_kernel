@@ -287,10 +287,11 @@ int sysctl_tcp_min_tso_segs __read_mostly = 2;
 int sysctl_tcp_autocorking __read_mostly = 1;
 
 /* begin TCP-LTE */
-int sysctl_tcp_prb = 51;//a safe intial value
+int sysctl_tcp_prb = 10;//a safe intial value
 int sysctl_tcp_lte = 0;//use our own rate reduction
 int sysctl_tcp_see = 0;//use our own rate reduction
 int sysctl_tcp_rate = 0;//do not use the fixed window
+int sysctl_tcp_add = 0;// the amount to add is 0 in the beginning
 /* end TCP-LTE */
 
 struct percpu_counter tcp_orphan_count;

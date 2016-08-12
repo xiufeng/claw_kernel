@@ -320,9 +320,8 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if (!tcp_is_cwnd_limited(sk))
 		return;
 
-	//if (tp->snd_cwnd <= tp->snd_ssthresh) {
-	//slow start when we have slow PRB
-	if ((sysctl_tcp_prb<0.6) && (sysctl_tcp_prb>0)) {
+	//if (sysctl_tcp_prb<40) {
+	if (1) {//force slow start
 		if (hystart && after(ack, ca->end_seq))
 			bictcp_hystart_reset(sk);
 		
@@ -330,13 +329,24 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 
 		/* TCP-LTE */
 		if(sysctl_tcp_see==1) 
-			printk("slow start win %d, ssthresh %d, acked %d, prb %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, sysctl_tcp_prb);
+			printk("spring slow start win %d, ssthresh %d, acked %d, prb %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, sysctl_tcp_prb);
+		/* TCP-LTE */
+
+		/* TCP-LTE */
+		// force slow start
+			return;
+
+
+			printk("spring without return 1\n");
 		/* TCP-LTE */
 
 
 		if (!acked)
 			return;
 	}
+
+	printk("spring without return 2\n");
+
 	bictcp_update(ca, tp->snd_cwnd, acked);
 
 
@@ -351,7 +361,7 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	}
 
 	if(sysctl_tcp_see==1)
-   		printk("tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
+   		printk("spring tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d, prb %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt, sysctl_tcp_prb);
 	/* TCP-LTE */
 }
 
@@ -370,10 +380,6 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 		ca->last_max_cwnd = tp->snd_cwnd;
 
 	ca->loss_cwnd = tp->snd_cwnd;
-
-/* TCP-LTE */
-//printk("recomputing ssthresh in spring\n");
-/* TCP-LTE */
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);
 }

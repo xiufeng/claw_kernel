@@ -78,7 +78,7 @@ static void tcp_event_new_data_sent(struct sock *sk, const struct sk_buff *skb)
 
 	/* TCP-LTE */
 	if(sysctl_tcp_see==1)
-		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest));
+		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, prb %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), sysctl_tcp_prb);
 	/* TCP-LTE */
 
 	tcp_advance_send_head(sk, skb);

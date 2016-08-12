@@ -154,8 +154,17 @@ void tcp_assign_congestion_control(struct sock *sk)
 
 	rcu_read_lock();
 	list_for_each_entry_rcu(ca, &tcp_cong_list, list) {
+
+		/* TCP-LTE */
+		//printk("loop to ca name %s\n", ca->name);
+		/* TCP-LTE */
+
+	
 		if (likely(try_module_get(ca->owner))) {
 			icsk->icsk_ca_ops = ca;
+			/* TCP-LTE */
+			//printk("ca %s is assigned\n", ca->name);
+			/* TCP-LTE */
 			goto out;
 		}
 		/* Fallback to next available. The last really
@@ -226,6 +235,10 @@ int tcp_set_default_congestion_control(const char *name)
 		ret = 0;
 	}
 	spin_unlock(&tcp_cong_list_lock);
+
+	/* TCP-LTE */
+	//printk("set to %s, error %d\n", name, ret);
+	/* TCP-LTE */
 
 	return ret;
 }
@@ -410,6 +423,13 @@ void tcp_reno_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 
 	if (!tcp_is_cwnd_limited(sk))
 		return;
+
+	/* TCP-LTE */
+//	if (sysctl_tcp_lte==1){
+//		if(sysctl_tcp_see==1)
+//			printk("in tcp reno now\n");
+//	}
+	/* TCP-LTE */
 
 	/* In "safe" area, increase. */
 	if (tp->snd_cwnd <= tp->snd_ssthresh) {
