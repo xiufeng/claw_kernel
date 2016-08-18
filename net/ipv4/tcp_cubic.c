@@ -147,8 +147,13 @@ static void bictcp_init(struct sock *sk)
 	if (hystart)
 		bictcp_hystart_reset(sk);
 
-	if (!hystart && initial_ssthresh)
+	if (!hystart && initial_ssthresh){
 		tcp_sk(sk)->snd_ssthresh = initial_ssthresh;
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1)
+			printk("set the sending window to %d in init", initial_ssthresh);
+		/* TCP-LTE */
+	}
 }
 
 /* calculate the cubic root of x using a table lookup followed by one
@@ -329,6 +334,11 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 				printk("cubic hystart reset win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
 			/* TCP-LTE */
 		}
+
+		if(sysctl_tcp_see==1){ 
+			printk("acked is %d before slow start\n", acked);
+		}
+
 		acked = tcp_slow_start(tp, acked);
 
 		/* TCP-LTE */

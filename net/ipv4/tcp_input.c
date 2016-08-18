@@ -760,6 +760,12 @@ static void tcp_update_pacing_rate(struct sock *sk)
 
 	rate *= max(tp->snd_cwnd, tp->packets_out);
 
+	/* TCP-LTE*/
+	if(sysctl_tcp_see==1){
+		printk("pacing is called, rate %d\n", rate);
+	}
+	/* TCP-LTE*/
+
 	if (likely(tp->srtt_us))
 		do_div(rate, tp->srtt_us);
 
@@ -3010,7 +3016,9 @@ static void tcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 
 	/* TCP-LTE */
-	//printk("congestion avoidance entry, name %s\n", icsk->icsk_ca_ops->name);
+	if (sysctl_tcp_see==1){
+		printk("congestion avoidance entry, name %s, acked %d\n", icsk->icsk_ca_ops->name, acked);
+	}
 	/* TCP-LTE */
 
 	icsk->icsk_ca_ops->cong_avoid(sk, ack, acked);
@@ -3509,7 +3517,7 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 	u32 source_port = ntohs(tcp_hdr(skb)->source);
 	u32 dest_port = ntohs(tcp_hdr(skb)->dest);
 	if(sysctl_tcp_see==1)
-		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, prb %d, rtt %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, sysctl_tcp_prb, tp->srtt_us);
+		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, prb %d, rtt %d, adv_mss is %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, sysctl_tcp_prb, tp->srtt_us, tp->advmss);
 	/* TCP-LTE */
 
 
@@ -3613,9 +3621,24 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 	/* See if we can take anything off of the retransmit queue. */
 	acked = tp->packets_out;
+
+
+	/* TCP-LTE */
+	if(sysctl_tcp_see==1){
+		printk("packets_out %d\n",tp->packets_out);
+	}
+	/* TCP-LTE */
+
+
 	flag |= tcp_clean_rtx_queue(sk, prior_fackets, prior_snd_una,
 				    sack_rtt_us);
 	acked -= tp->packets_out;
+
+	/* TCP-LTE */
+	if(sysctl_tcp_see==1){
+		printk("ack %d after removing packets_out\n",acked);
+	}
+	/* TCP-LTE */
 
 	/* Advance cwnd if state allows */
 	if (tcp_may_raise_cwnd(sk, flag))
@@ -3625,9 +3648,6 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 		is_dupack = !(flag & (FLAG_SND_UNA_ADVANCED | FLAG_NOT_DUP));
 
 
-		/* TCP-LTE */
-		//printk("entry of fast retrans alert in dubious ack, cwnd %d\n",tp->snd_cwnd);
-		/* TCP-LTE */
 
 
 		tcp_fastretrans_alert(sk, acked, prior_unsacked,

@@ -1470,9 +1470,8 @@ static void tcp_cwnd_application_limited(struct sock *sk)
 	tp->snd_cwnd_stamp = tcp_time_stamp;
 
 	/* TCP-LTE */
-	//this did not happen
-	//if(sysctl_tcp_see==1)
-	//	printk("tcp_cwnd_application_limited drop %d\n",tp->snd_cwnd);
+	if(sysctl_tcp_see==1)
+		printk("tcp_cwnd_application_limited drop %d\n",tp->snd_cwnd);
 	/* TCP-LTE */
 
 
@@ -1673,6 +1672,12 @@ static bool tcp_snd_wnd_test(const struct tcp_sock *tp,
 	if (skb->len > cur_mss)
 		end_seq = TCP_SKB_CB(skb)->seq + cur_mss;
 
+	/* TCP-LTE */
+	if(sysctl_tcp_see==1){
+		printk("the end_seq is %d, window end seq is %d\n", end_seq, tcp_wnd_end(tp));
+	}
+	/* TCP-LTE */
+
 	return !after(end_seq, tcp_wnd_end(tp));
 }
 
@@ -1688,12 +1693,31 @@ static unsigned int tcp_snd_test(const struct sock *sk, struct sk_buff *skb,
 
 	tcp_init_tso_segs(sk, skb, cur_mss);
 
-	if (!tcp_nagle_test(tp, skb, cur_mss, nonagle))
+	if (!tcp_nagle_test(tp, skb, cur_mss, nonagle)){
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("fail to pass the nagle test cwnd %d, clamp %d\n", tp->snd_cwnd, tp->snd_cwnd_clamp);
+		}
+		/* TCP-LTE */
 		return 0;
+	}
+	else{
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("pass the nagle test cwnd %d, clamp %d\n", tp->snd_cwnd, tp->snd_cwnd_clamp);
+		}
+		/* TCP-LTE */
+	}
 
 	cwnd_quota = tcp_cwnd_test(tp, skb);
 	if (cwnd_quota && !tcp_snd_wnd_test(tp, skb, cur_mss))
 		cwnd_quota = 0;
+
+	/* TCP-LTE */
+	if(sysctl_tcp_see==1){
+		printk("the retransmission quota is %d, cwnd %d, clamp %d\n", cwnd_quota, tp->snd_cwnd, tp->snd_cwnd_clamp);
+	}
+	/* TCP-LTE */
 
 	return cwnd_quota;
 }
@@ -1971,8 +1995,8 @@ static int tcp_mtu_probe(struct sock *sk)
 
 		/* TCP-LTE */
 		//this did not happen
-		//if(sysctl_tcp_see==1)
-		//	printk("tcp_mtu_probe drop %d\n",tp->snd_cwnd);
+		if(sysctl_tcp_see==1)
+			printk("tcp_mtu_probe drop %d\n",tp->snd_cwnd);
 		/* TCP-LTE */
 
 
@@ -2034,28 +2058,59 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		}
 
 		cwnd_quota = tcp_cwnd_test(tp, skb);
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("the sending quota is %d, cwnd %d, clamp %d, max_seges %d\n", cwnd_quota, tp->snd_cwnd, tp->snd_cwnd_clamp, max_segs);
+		}
+		/* TCP-LTE */
+
 		if (!cwnd_quota) {
 			is_cwnd_limited = true;
 			if (push_one == 2)
 				/* Force out a loss probe pkt. */
 				cwnd_quota = 1;
-			else
+			else{
+				/* TCP-LTE */
+				if(sysctl_tcp_see==1){
+					printk("quit reason1, no quota, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+				}
+				/* TCP-LTE */
 				break;
+			}
 		}
 
-		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now)))
+		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now))){
+			/* TCP-LTE */
+			if(sysctl_tcp_see==1){
+				printk("quit reason2, did not pass the snd_wnd_test, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+			}
+			/* TCP-LTE */
 			break;
+		}
 
 		if (tso_segs == 1 || !max_segs) {
 			if (unlikely(!tcp_nagle_test(tp, skb, mss_now,
 						     (tcp_skb_is_last(sk, skb) ?
-						      nonagle : TCP_NAGLE_PUSH))))
+						      nonagle : TCP_NAGLE_PUSH)))){
+				/* TCP-LTE */
+				if(sysctl_tcp_see==1){
+					printk("quit reason3, did not pass the nagle test, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+				}
+				/* TCP-LTE */
 				break;
+			}
 		} else {
 			if (!push_one &&
 			    tcp_tso_should_defer(sk, skb, &is_cwnd_limited,
-						 max_segs))
+						 max_segs)){
+				/* TCP-LTE */
+				if(sysctl_tcp_see==1){
+					printk("quit reason4, tso should defer, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+				}
+				/* TCP-LTE */
 				break;
+			    }
 		}
 
 		limit = mss_now;
@@ -2067,8 +2122,14 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 						    nonagle);
 
 		if (skb->len > limit &&
-		    unlikely(tso_fragment(sk, skb, limit, mss_now, gfp)))
+		    unlikely(tso_fragment(sk, skb, limit, mss_now, gfp))){
+			/* TCP-LTE */
+			if(sysctl_tcp_see==1){
+				printk("quit reason5, skb greater than limit, skb_len %d, limit %d\n", skb->len, limit);
+			}
+			/* TCP-LTE */
 			break;
+		}
 
 		/* TCP Small Queues :
 		 * Control number of packets in qdisc/devices to two packets / or ~1 ms.
@@ -2090,12 +2151,25 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			 * test again the condition.
 			 */
 			smp_mb__after_atomic();
-			if (atomic_read(&sk->sk_wmem_alloc) > limit)
+			if (atomic_read(&sk->sk_wmem_alloc) > limit){
+				/* TCP-LTE */
+				if(sysctl_tcp_see==1){
+					printk("quit reason6, malloc, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+				}
+				/* TCP-LTE */
 				break;
+			}
 		}
 
-		if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp)))
+		//TODO: the transmission code is here
+		if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp))){
+			/* TCP-LTE */
+			if(sysctl_tcp_see==1){
+				printk("packet successfully sent, cwnd %d, limit %d\n", tp->snd_cwnd, limit);
+			}
+			/* TCP-LTE */
 			break;
+		}
 
 repair:
 		/* Advance the send_head.  This one is sent out.
@@ -2105,6 +2179,13 @@ repair:
 
 		tcp_minshall_update(tp, mss_now, skb);
 		sent_pkts += tcp_skb_pcount(skb);
+
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("quit reason7, repair, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+		}
+		/* TCP-LTE */
 
 		if (push_one)
 			break;
