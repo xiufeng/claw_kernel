@@ -184,6 +184,12 @@ static void tcp_event_data_sent(struct tcp_sock *tp,
 
 	tp->lsndtime = now;
 
+	/* TCP-LTE */
+	if(sysctl_tcp_see==1){
+		printk("data packet just sent, cwnd %d\n", tp->snd_cwnd);
+	}
+	/* TCP-LTE */
+
 	/* If it is a reply for ato after last received
 	 * packet, enter pingpong mode.
 	 */
@@ -2162,10 +2168,15 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		}
 
 		//TODO: the transmission code is here
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("start transmission skb, cwnd %d, limit %d\n", tp->snd_cwnd, limit);
+		}
+		/* TCP-LTE */
 		if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp))){
 			/* TCP-LTE */
 			if(sysctl_tcp_see==1){
-				printk("packet successfully sent, cwnd %d, limit %d\n", tp->snd_cwnd, limit);
+				printk("reason 8, transmission failure, cwnd %d, limit %d\n", tp->snd_cwnd, limit);
 			}
 			/* TCP-LTE */
 			break;
@@ -2194,6 +2205,14 @@ repair:
 	if (likely(sent_pkts)) {
 		if (tcp_in_cwnd_reduction(sk))
 			tp->prr_out += sent_pkts;
+
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("sent_pkts %d, cwnd %d\n", sent_pkts, tp->snd_cwnd);
+		}
+		/* TCP-LTE */
+
 
 		/* Send one loss probe per tail loss episode. */
 		if (push_one != 2)
