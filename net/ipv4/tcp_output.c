@@ -1501,10 +1501,22 @@ static void tcp_cwnd_validate(struct sock *sk, bool is_cwnd_limited)
 		/* Network is feed fully. */
 		tp->snd_cwnd_used = 0;
 		tp->snd_cwnd_stamp = tcp_time_stamp;
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1)
+			printk("network is fully feed, cwnd %d\n",tp->snd_cwnd);
+		/* TCP-LTE */
+
+
 	} else {
 		/* Network starves. */
 		if (tp->packets_out > tp->snd_cwnd_used)
 			tp->snd_cwnd_used = tp->packets_out;
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1)
+			printk("network starves, cwnd %d\n",tp->snd_cwnd);
+		/* TCP-LTE */
 
 		if (sysctl_tcp_slow_start_after_idle &&
 		    (s32)(tcp_time_stamp - tp->snd_cwnd_stamp) >= inet_csk(sk)->icsk_rto)
@@ -2086,6 +2098,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			}
 		}
 
+
 		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now))){
 			/* TCP-LTE */
 			if(sysctl_tcp_see==1){
@@ -2094,6 +2107,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			/* TCP-LTE */
 			break;
 		}
+
 
 		if (tso_segs == 1 || !max_segs) {
 			if (unlikely(!tcp_nagle_test(tp, skb, mss_now,
@@ -2104,9 +2118,13 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 					printk("quit reason3, did not pass the nagle test, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
 				}
 				/* TCP-LTE */
+
 				break;
 			}
 		} else {
+
+
+
 			if (!push_one &&
 			    tcp_tso_should_defer(sk, skb, &is_cwnd_limited,
 						 max_segs)){
@@ -2126,6 +2144,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 							  cwnd_quota,
 							  max_segs),
 						    nonagle);
+
 
 		if (skb->len > limit &&
 		    unlikely(tso_fragment(sk, skb, limit, mss_now, gfp))){
@@ -2149,6 +2168,12 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		 */
 		limit = max(2 * skb->truesize, sk->sk_pacing_rate >> 10);
 		limit = min_t(u32, limit, sysctl_tcp_limit_output_bytes);
+
+		/* TCP-LTE */
+		if(sysctl_tcp_see==1){
+			printk("limit %d, output bytes limit %d\n", limit, sysctl_tcp_limit_output_bytes);
+		}
+		/* TCP-LTE */
 
 		if (atomic_read(&sk->sk_wmem_alloc) > limit) {
 			set_bit(TSQ_THROTTLED, &tp->tsq_flags);
