@@ -403,6 +403,10 @@ void tcp_init_sock(struct sock *sk)
 	 */
 	tp->snd_cwnd = TCP_INIT_CWND;
 
+	/* TCP-LTE */
+	tp->rabe_last_snd_cwnd = 0;
+	/* TCP-LTE */
+
 	/* See draft-stevens-tcpca-spec-01 for discussion of the
 	 * initialization of these values.
 	 */

@@ -78,7 +78,7 @@ static void tcp_event_new_data_sent(struct sock *sk, const struct sk_buff *skb)
 
 	/* TCP-LTE */
 	if(sysctl_tcp_see==1)
-		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, prb %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), sysctl_tcp_prb);
+		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, prb %d, sock id %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), sysctl_tcp_prb, tp->rabe_sock_id);
 	/* TCP-LTE */
 
 	tcp_advance_send_head(sk, skb);
@@ -162,11 +162,6 @@ static void tcp_cwnd_restart(struct sock *sk, const struct dst_entry *dst)
 	tp->snd_cwnd_stamp = tcp_time_stamp;
 	tp->snd_cwnd_used = 0;
 
-	/* TCP-LTE */
-	//this does not have much impact
-	if(sysctl_tcp_see==1)
-		printk("tcp_cwnd_restart drop %d\n",tp->snd_cwnd);
-	/* TCP-LTE */
 
 }
 
@@ -185,9 +180,9 @@ static void tcp_event_data_sent(struct tcp_sock *tp,
 	tp->lsndtime = now;
 
 	/* TCP-LTE */
-	if(sysctl_tcp_see==1){
-		printk("data packet just sent, cwnd %d\n", tp->snd_cwnd);
-	}
+//	if(sysctl_tcp_see==1){
+//		printk("data packet just sent, cwnd %d\n", tp->snd_cwnd);
+//	}
 	/* TCP-LTE */
 
 	/* If it is a reply for ato after last received
@@ -1475,10 +1470,6 @@ static void tcp_cwnd_application_limited(struct sock *sk)
 	}
 	tp->snd_cwnd_stamp = tcp_time_stamp;
 
-	/* TCP-LTE */
-	if(sysctl_tcp_see==1)
-		printk("tcp_cwnd_application_limited drop %d\n",tp->snd_cwnd);
-	/* TCP-LTE */
 
 
 }
@@ -1690,11 +1681,6 @@ static bool tcp_snd_wnd_test(const struct tcp_sock *tp,
 	if (skb->len > cur_mss)
 		end_seq = TCP_SKB_CB(skb)->seq + cur_mss;
 
-	/* TCP-LTE */
-	if(sysctl_tcp_see==1){
-		printk("the end_seq is %d, window end seq is %d\n", end_seq, tcp_wnd_end(tp));
-	}
-	/* TCP-LTE */
 
 	return !after(end_seq, tcp_wnd_end(tp));
 }
@@ -1712,30 +1698,12 @@ static unsigned int tcp_snd_test(const struct sock *sk, struct sk_buff *skb,
 	tcp_init_tso_segs(sk, skb, cur_mss);
 
 	if (!tcp_nagle_test(tp, skb, cur_mss, nonagle)){
-		/* TCP-LTE */
-		if(sysctl_tcp_see==1){
-			printk("fail to pass the nagle test cwnd %d, clamp %d\n", tp->snd_cwnd, tp->snd_cwnd_clamp);
-		}
-		/* TCP-LTE */
 		return 0;
-	}
-	else{
-		/* TCP-LTE */
-		if(sysctl_tcp_see==1){
-			printk("pass the nagle test cwnd %d, clamp %d\n", tp->snd_cwnd, tp->snd_cwnd_clamp);
-		}
-		/* TCP-LTE */
 	}
 
 	cwnd_quota = tcp_cwnd_test(tp, skb);
 	if (cwnd_quota && !tcp_snd_wnd_test(tp, skb, cur_mss))
 		cwnd_quota = 0;
-
-	/* TCP-LTE */
-	if(sysctl_tcp_see==1){
-		printk("the retransmission quota is %d, cwnd %d, clamp %d\n", cwnd_quota, tp->snd_cwnd, tp->snd_cwnd_clamp);
-	}
-	/* TCP-LTE */
 
 	return cwnd_quota;
 }
@@ -2011,13 +1979,6 @@ static int tcp_mtu_probe(struct sock *sk)
 		tp->mtu_probe.probe_seq_start = TCP_SKB_CB(nskb)->seq;
 		tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
 
-		/* TCP-LTE */
-		//this did not happen
-		if(sysctl_tcp_see==1)
-			printk("tcp_mtu_probe drop %d\n",tp->snd_cwnd);
-		/* TCP-LTE */
-
-
 
 		return 1;
 	}
@@ -2065,6 +2026,35 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	max_segs = tcp_tso_autosize(sk, mss_now);
 	while ((skb = tcp_send_head(sk))) {
 		unsigned int limit;
+
+		/* TCP-LTE */
+
+		//TODO: do not mix window of our connection and others
+		// add the window when we have resources left
+		// in the beginning, we still run slow start
+		if((tp->rabe_sock_id==739) && (tp->snd_cwnd>100)){
+			if(sysctl_tcp_add>0){
+				// add to the last value
+				if(tp->rabe_last_snd_cwnd==0)
+					tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
+				else
+					tp->snd_cwnd = tp->rabe_last_snd_cwnd + sysctl_tcp_add;
+
+
+				if(sysctl_tcp_see==1)
+					printk("new window is %d after adding %d\n", tp->snd_cwnd, sysctl_tcp_add);
+				
+				// we can only add once until the next update
+				sysctl_tcp_add = 0;
+				// store current window
+				tp->rabe_last_snd_cwnd = tp->snd_cwnd;
+			}
+			else{
+				//lock the window if there are no resource left
+				tp->snd_cwnd = tp->rabe_last_snd_cwnd; 
+			}
+		}
+		/* TCP-LTE */
 
 		tso_segs = tcp_init_tso_segs(sk, skb, mss_now);
 		BUG_ON(!tso_segs);

@@ -760,12 +760,6 @@ static void tcp_update_pacing_rate(struct sock *sk)
 
 	rate *= max(tp->snd_cwnd, tp->packets_out);
 
-	/* TCP-LTE*/
-	if(sysctl_tcp_see==1){
-		printk("pacing is called, rate %d\n", rate);
-	}
-	/* TCP-LTE*/
-
 	if (likely(tp->srtt_us))
 		do_div(rate, tp->srtt_us);
 
@@ -2857,23 +2851,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 				return;
 			}
 
-			/* TCP-LTE */
-			//tcp_end_cwnd_reduction(sk);
-			/* TCP-LTE */
-
-
-			/* TCP-LTE */
-			if (sysctl_tcp_rate==0){
-				tcp_end_cwnd_reduction(sk);
-			}
-			else{
-				tp->snd_cwnd = sysctl_tcp_rate; 
-				if(sysctl_tcp_see==1)
-					printk("TCP fixed window, bypass the end reduction, cwnd %d\n",tp->snd_cwnd);
-			}
-			/* TCP-LTE */
-
-
+			tcp_end_cwnd_reduction(sk);
 
 			break;
 		}
@@ -2940,20 +2918,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 	if (do_lost)
 		tcp_update_scoreboard(sk, fast_rexmit);
 
-	/* TCP-LTE */
-	//tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
-	/* TCP-LTE */
-
-	/* TCP-LTE */
-	if(sysctl_tcp_rate==0){
-		tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
-	}
-	else{
-		tp->snd_cwnd = sysctl_tcp_rate;
-		if(sysctl_tcp_see==1)
-			printk("Fixed window, bypass reduction with win %d\n",tp->snd_cwnd);
-	}
-	/* TCP-LTE */
+	tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
 
 	tcp_xmit_retransmit_queue(sk);
 }
@@ -3498,26 +3463,14 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 
 	/* TCP-LTE */
-	if(sysctl_tcp_rate!=0){
-		tp->snd_cwnd = sysctl_tcp_rate;
-		if(sysctl_tcp_see==1)
-			printk("enforce fixed window %d\n", tp->snd_cwnd);
-	}
-
-	// the window adding idea
-	if(sysctl_tcp_add>0){
-		tp->snd_cwnd += sysctl_tcp_add;
-		if(sysctl_tcp_see==1)
-			printk("new window is %d after adding %d\n", tp->snd_cwnd, sysctl_tcp_add);
-		
-		// we can only add once until the next update
-		sysctl_tcp_add = 0;
-	}
-
 	u32 source_port = ntohs(tcp_hdr(skb)->source);
 	u32 dest_port = ntohs(tcp_hdr(skb)->dest);
+
+	if(dest_port==443)
+		tp->rabe_sock_id = 739;
+
 	if(sysctl_tcp_see==1)
-		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, prb %d, rtt %d, adv_mss is %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, sysctl_tcp_prb, tp->srtt_us, tp->advmss);
+		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, prb %d, rtt %d, adv_mss is %d, sock id %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, sysctl_tcp_prb, tp->srtt_us, tp->advmss, tp->rabe_sock_id);
 	/* TCP-LTE */
 
 

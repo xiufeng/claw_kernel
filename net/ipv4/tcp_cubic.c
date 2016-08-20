@@ -356,13 +356,6 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	tcp_cong_avoid_ai(tp, ca->cnt, acked);
 
 	/* TCP-LTE */
-	// manually set the window
-	if(sysctl_tcp_rate!=0){
-		tp->snd_cwnd = sysctl_tcp_rate;
-		tp->snd_ssthresh = sysctl_tcp_rate; 
-		printk("manually set win %d\n", tp->snd_cwnd);
-	}
-
 	if(sysctl_tcp_see==1)
    		printk("cubic tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
 	/* TCP-LTE */
