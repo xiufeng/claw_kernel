@@ -2718,6 +2718,12 @@ static void tcp_process_loss(struct sock *sk, int flag, bool is_dupack)
 			tp->frto = 0; /* Loss was real: 2nd part of step 3.a */
 		} else if (flag & FLAG_SND_UNA_ADVANCED && !recovered) {
 			tp->high_seq = tp->snd_nxt;
+
+
+			/* TCP-LTE */
+			tp->xmit_in=6;
+			/* TCP-LTE */
+
 			__tcp_push_pending_frames(sk, tcp_current_mss(sk),
 						  TCP_NAGLE_OFF);
 			if (after(tp->snd_nxt, tp->high_seq))
@@ -4890,6 +4896,7 @@ static void tcp_check_space(struct sock *sk)
 
 static inline void tcp_data_snd_check(struct sock *sk)
 {
+
 	tcp_push_pending_frames(sk);
 	tcp_check_space(sk);
 }
@@ -5250,6 +5257,9 @@ void tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 				 */
 				tcp_ack(sk, skb, 0);
 				__kfree_skb(skb);
+				/* TCP-LTE */
+				tp->xmit_in = 1;
+				/* TCP-LTE */
 				tcp_data_snd_check(sk);
 				return;
 			} else { /* Header too small */
@@ -5315,6 +5325,9 @@ void tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 			if (TCP_SKB_CB(skb)->ack_seq != tp->snd_una) {
 				/* Well, only one small jumplet in fast path... */
 				tcp_ack(sk, skb, FLAG_DATA);
+				/* TCP-LTE */
+				tp->xmit_in = 2;
+				/* TCP-LTE */
 				tcp_data_snd_check(sk);
 				if (!inet_csk_ack_scheduled(sk))
 					goto no_ack;
@@ -5355,6 +5368,9 @@ step5:
 	/* step 7: process the segment text */
 	tcp_data_queue(sk, skb);
 
+	/* TCP-LTE */
+	tp->xmit_in = 3;
+	/* TCP-LTE */
 	tcp_data_snd_check(sk);
 	tcp_ack_snd_check(sk);
 	return;
@@ -5739,6 +5755,10 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb,
 		/* Do step6 onward by hand. */
 		tcp_urg(sk, skb, th);
 		__kfree_skb(skb);
+
+		/* TCP-LTE */
+		tp->xmit_in = 4;
+		/* TCP-LTE */
 		tcp_data_snd_check(sk);
 		return 0;
 	}
@@ -5938,6 +5958,10 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb,
 
 	/* tcp_data could move socket to TIME-WAIT */
 	if (sk->sk_state != TCP_CLOSE) {
+
+		/* TCP-LTE */
+		tp->xmit_in = 5;
+		/* TCP-LTE */
 		tcp_data_snd_check(sk);
 		tcp_ack_snd_check(sk);
 	}

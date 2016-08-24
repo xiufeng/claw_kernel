@@ -224,6 +224,9 @@ struct tcp_sock {
 	/* TCP-LTE */
  	u32	rabe_last_snd_cwnd;	/* last rabe window		*/
  	u32	rabe_sock_id;	/* rabe socket id		*/
+ 	u32	xmit_in;	/* the reason of this xmit		*/
+ 	u32	xmit_out;	/* the reason of this xmit		*/
+ 	u32	xmit_tcp;	/* the reason of this xmit		*/
 	/* TCP-LTE */
 
 

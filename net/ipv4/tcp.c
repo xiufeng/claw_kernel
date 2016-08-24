@@ -405,6 +405,10 @@ void tcp_init_sock(struct sock *sk)
 
 	/* TCP-LTE */
 	tp->rabe_last_snd_cwnd = 0;
+	// the reasons of transmit
+	tp->xmit_in=0;
+	tp->xmit_out=0;
+	tp->xmit_tcp=0;
 	/* TCP-LTE */
 
 	/* See draft-stevens-tcpca-spec-01 for discussion of the
@@ -694,6 +698,9 @@ static void tcp_push(struct sock *sk, int flags, int mss_now,
 	if (flags & MSG_MORE)
 		nonagle = TCP_NAGLE_CORK;
 
+	/* TCP-LTE */
+	tp->xmit_tcp=1;
+	/* TCP-LTE */
 	__tcp_push_pending_frames(sk, mss_now, nonagle);
 }
 
@@ -969,8 +976,14 @@ new_segment:
 
 		if (forced_push(tp)) {
 			tcp_mark_push(tp, skb);
+			/* TCP-LTE */
+			tp->xmit_tcp=2;
+			/* TCP-LTE */
 			__tcp_push_pending_frames(sk, mss_now, TCP_NAGLE_PUSH);
 		} else if (skb == tcp_send_head(sk))
+			/* TCP-LTE */
+			tp->xmit_tcp=3;
+			/* TCP-LTE */
 			tcp_push_one(sk, mss_now);
 		continue;
 
@@ -1244,8 +1257,14 @@ new_segment:
 
 		if (forced_push(tp)) {
 			tcp_mark_push(tp, skb);
+			/* TCP-LTE */
+			tp->xmit_tcp=4;
+			/* TCP-LTE */
 			__tcp_push_pending_frames(sk, mss_now, TCP_NAGLE_PUSH);
 		} else if (skb == tcp_send_head(sk))
+			/* TCP-LTE */
+			tp->xmit_tcp=5;
+			/* TCP-LTE */
 			tcp_push_one(sk, mss_now);
 		continue;
 
@@ -2363,6 +2382,10 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 			 * for currently queued segments.
 			 */
 			tp->nonagle |= TCP_NAGLE_OFF|TCP_NAGLE_PUSH;
+
+			/* TCP-LTE */
+			tp->xmit_tcp=6;
+			/* TCP-LTE */
 			tcp_push_pending_frames(sk);
 		} else {
 			tp->nonagle &= ~TCP_NAGLE_OFF;
@@ -2451,6 +2474,11 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 			tp->nonagle &= ~TCP_NAGLE_CORK;
 			if (tp->nonagle&TCP_NAGLE_OFF)
 				tp->nonagle |= TCP_NAGLE_PUSH;
+
+
+			/* TCP-LTE */
+			tp->xmit_tcp=7;
+			/* TCP-LTE */
 			tcp_push_pending_frames(sk);
 		}
 		break;
