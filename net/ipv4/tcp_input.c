@@ -2987,9 +2987,11 @@ static void tcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 
 	/* TCP-LTE */
+	/*
 	if (sysctl_tcp_see==1){
 		printk("congestion avoidance entry, name %s, acked %d\n", icsk->icsk_ca_ops->name, acked);
 	}
+	*/
 	/* TCP-LTE */
 
 	icsk->icsk_ca_ops->cong_avoid(sk, ack, acked);
@@ -3475,7 +3477,7 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 	if(dest_port==443)
 		tp->rabe_sock_id = 739;
 
-	if(sysctl_tcp_see==1)
+	if((sysctl_tcp_see==1)&&(dest_port==443))
 		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, prb %d, rtt %d, adv_mss is %d, sock id %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, sysctl_tcp_prb, tp->srtt_us, tp->advmss, tp->rabe_sock_id);
 	/* TCP-LTE */
 
@@ -3513,17 +3515,14 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 	prior_fackets = tp->fackets_out;
 
 	/* begin TCP-LTE */
+	/*
 	// assign the received res1 value to sysctl output
 	// we do not want the 0 value in other unmodified tcp flow destory our prb u
 	int prb_tmp = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece;
-	//if(sysctl_tcp_see==1)
-	//	printk("prb_temp %d, dest port %d, ack %d\n",prb_tmp, dest_port, tcp_hdr(skb)->ack);
-	//if((prb_tmp!=0) && ((dest_port==443)||(dest_port==80))){
 	if(prb_tmp!=0){
 		sysctl_tcp_prb = (tcp_hdr(skb)->res1)*4 + (tcp_hdr(skb)->cwr)*2 + tcp_hdr(skb)->ece; 
-	//	if(sysctl_tcp_see==1)
-	//		printk("weighted ack, cwnd %d, prb %d\n",tp->snd_cwnd, sysctl_tcp_prb);
 	}
+	*/
 	/* end TCP-LTE */
 
 	/* ts_recent update must be made after we are sure that the packet
@@ -3582,22 +3581,10 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 	acked = tp->packets_out;
 
 
-	/* TCP-LTE */
-	if(sysctl_tcp_see==1){
-		printk("packets_out %d\n",tp->packets_out);
-	}
-	/* TCP-LTE */
-
-
 	flag |= tcp_clean_rtx_queue(sk, prior_fackets, prior_snd_una,
 				    sack_rtt_us);
 	acked -= tp->packets_out;
 
-	/* TCP-LTE */
-	if(sysctl_tcp_see==1){
-		printk("ack %d after removing packets_out\n",acked);
-	}
-	/* TCP-LTE */
 
 	/* Advance cwnd if state allows */
 	if (tcp_may_raise_cwnd(sk, flag))
