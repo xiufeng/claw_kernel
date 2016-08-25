@@ -378,7 +378,7 @@ static u32 bictcp_recalc_ssthresh(struct sock *sk)
 	ca->loss_cwnd = tp->snd_cwnd;
 
 	/* TCP-LTE */
-	printk("recomputing ssthresh to %d in cubic\n", max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U));
+	//printk("recomputing ssthresh to %d in cubic\n", max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U));
 	/* TCP-LTE */
 
 	return max((tp->snd_cwnd * beta) / BICTCP_BETA_SCALE, 2U);
@@ -423,7 +423,7 @@ static void hystart_update(struct sock *sk, u32 delay)
 				tp->snd_ssthresh = tp->snd_cwnd;
 
 			/* TCP-LTE */
-			printk("cubic hystart acktrain update ssthresh %d\n", tp->snd_ssthresh);
+			//printk("cubic hystart acktrain update ssthresh %d\n", tp->snd_ssthresh);
 			/* TCP-LTE */
 			}
 		}
