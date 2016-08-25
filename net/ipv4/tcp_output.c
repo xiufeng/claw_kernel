@@ -77,7 +77,7 @@ static void tcp_event_new_data_sent(struct sock *sk, const struct sk_buff *skb)
 
 
 	/* TCP-LTE */
-	if(sysctl_tcp_see==1)
+	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
 		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, prb %d, sock id %d, skb_length %d, data %d, MAC %d, header %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), sysctl_tcp_prb, tp->rabe_sock_id, skb->len, skb->data_len, skb->mac_len, skb->hdr_len);
 	/* TCP-LTE */
 
@@ -179,11 +179,6 @@ static void tcp_event_data_sent(struct tcp_sock *tp,
 
 	tp->lsndtime = now;
 
-	/* TCP-LTE */
-//	if(sysctl_tcp_see==1){
-//		printk("data packet just sent, cwnd %d\n", tp->snd_cwnd);
-//	}
-	/* TCP-LTE */
 
 	/* If it is a reply for ato after last received
 	 * packet, enter pingpong mode.
@@ -745,9 +740,6 @@ static void tcp_tsq_handler(struct sock *sk)
 		/*TCP-LTE*/
 		struct tcp_sock *tp = tcp_sk(sk);
 		tp->xmit_out = 1;
-	//	if(sysctl_tcp_see==1){
-	//		printk("xmit1, tsq handler\n");
-	//	}
 		/*TCP-LTE*/
 
 		tcp_write_xmit(sk, tcp_current_mss(sk), tcp_sk(sk)->nonagle,
@@ -1693,9 +1685,11 @@ static bool tcp_snd_wnd_test(const struct tcp_sock *tp,
 
 
 	/* TCP-LTE */
+	/*
 	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
 		printk("snding window test, end_seq %d, tcp_wnd_end %d\n", end_seq, tcp_wnd_end(tp));
 	}
+	*/
 	/* TCP-LTE */
 
 
@@ -2131,7 +2125,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now))){
 			/* TCP-LTE */
 			if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-				printk("quit reason2, did not pass the snd_wnd_test, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+				printk("quit reason2, did not pass the snd_wnd_test\n");
 			}
 			/* TCP-LTE */
 			break;
@@ -2145,7 +2139,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				//break;
 				/* TCP-LTE */
 				if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-					printk("quit reason3, did not pass the nagle test, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+					printk("quit reason3, did not pass the nagle test\n");
 				}
 
 				break;
@@ -2160,7 +2154,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 						 max_segs)){
 				/* TCP-LTE */
 				if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-					printk("quit reason4, tso should defer, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+					printk("quit reason4, tso should defer\n");
 				}
 				/* TCP-LTE */
 				break;
@@ -2200,13 +2194,10 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		limit = min_t(u32, limit, sysctl_tcp_limit_output_bytes);
 
 		/* TCP-LTE */
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-			printk("limit %d, output bytes limit %d\n", limit, sysctl_tcp_limit_output_bytes);
-		}
 
 
 		//disable the limit by using a super large limit
-		if(sysctl_tcp_lte==1){
+		if((sysctl_tcp_lte==1)&&(tp->rabe_sock_id==739)){
 			limit = sysctl_tcp_limit_output_bytes*10;
 			printk("set super large limit %d\n", limit);
 		}
@@ -2232,17 +2223,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 
 		//TODO: the transmission code is here
-		/* TCP-LTE */
-		if(sysctl_tcp_see==1){
-			printk("start transmission skb, cwnd %d, limit %d\n", tp->snd_cwnd, limit);
-		}
-		/* TCP-LTE */
 		if (unlikely(tcp_transmit_skb(sk, skb, 1, gfp))){
-			/* TCP-LTE */
-			if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-				printk("reason 8, transmission failure, cwnd %d, limit %d\n", tp->snd_cwnd, limit);
-			}
-			/* TCP-LTE */
 			break;
 		}
 
@@ -2284,12 +2265,6 @@ repair:
 		if (tcp_in_cwnd_reduction(sk))
 			tp->prr_out += sent_pkts;
 
-
-		/* TCP-LTE */
-		if(sysctl_tcp_see==1){
-			printk("sent_pkts %d, cwnd %d\n", sent_pkts, tp->snd_cwnd);
-		}
-		/* TCP-LTE */
 
 
 		/* Send one loss probe per tail loss episode. */
@@ -2390,9 +2365,6 @@ void tcp_send_loss_probe(struct sock *sk)
 
 		/*TCP-LTE*/
 		tp->xmit_out=2;
-	//	if(sysctl_tcp_see==1){
-	//		printk("xmit2, loss probe\n");
-	//	}
 		/*TCP-LTE*/
 		err = tcp_write_xmit(sk, mss, TCP_NAGLE_OFF, 2, GFP_ATOMIC);
 		goto rearm_timer;
@@ -2457,9 +2429,6 @@ void __tcp_push_pending_frames(struct sock *sk, unsigned int cur_mss,
 	/*TCP-LTE*/
 	struct tcp_sock *tp = tcp_sk(sk);
 	tp->xmit_out = 3;
-//	if(sysctl_tcp_see==1){
-//		printk("xmit3, push pending\n");
-//	}
 	/*TCP-LTE*/
 
 	if (tcp_write_xmit(sk, cur_mss, nonagle, 0,
@@ -2479,9 +2448,6 @@ void tcp_push_one(struct sock *sk, unsigned int mss_now)
 	/*TCP-LTE*/
 	struct tcp_sock *tp = tcp_sk(sk);
 	tp->xmit_out = 4;
-//	if(sysctl_tcp_see==1){
-//		printk("xmit4, push one\n");
-//	}
 	/*TCP-LTE*/
 
 	tcp_write_xmit(sk, mss_now, TCP_NAGLE_PUSH, 1, sk->sk_allocation);
