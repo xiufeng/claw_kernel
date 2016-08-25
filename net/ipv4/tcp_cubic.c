@@ -149,10 +149,6 @@ static void bictcp_init(struct sock *sk)
 
 	if (!hystart && initial_ssthresh){
 		tcp_sk(sk)->snd_ssthresh = initial_ssthresh;
-		/* TCP-LTE */
-		if(sysctl_tcp_see==1)
-			printk("set the sending window to %d in init", initial_ssthresh);
-		/* TCP-LTE */
 	}
 }
 
@@ -330,19 +326,17 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 			bictcp_hystart_reset(sk);
 
 			/* TCP-LTE */
+			/*
 			if(sysctl_tcp_see==1)
 				printk("cubic hystart reset win %d, ssthresh %d\n", tp->snd_cwnd, tp->snd_ssthresh);
+			*/
 			/* TCP-LTE */
-		}
-
-		if(sysctl_tcp_see==1){ 
-			printk("acked is %d before slow start\n", acked);
 		}
 
 		acked = tcp_slow_start(tp, acked);
 
 		/* TCP-LTE */
-		if(sysctl_tcp_see==1) 
+		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)) 
 			printk("cubic slow start win %d, ssthresh %d, acked %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked);
 		/* TCP-LTE */
 
@@ -356,7 +350,7 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	tcp_cong_avoid_ai(tp, ca->cnt, acked);
 
 	/* TCP-LTE */
-	if(sysctl_tcp_see==1)
+	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
    		printk("cubic tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
 	/* TCP-LTE */
 }
@@ -439,8 +433,10 @@ static void hystart_update(struct sock *sk, u32 delay)
 		} else {
 
 			/* TCP-LTE */
+			/*
 			if(sysctl_tcp_see)
 				printk("hy slow start, local min %d, global min %d, delay thresh %d\n", ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
+			*/
 			/* TCP-LTE */
 
 
@@ -454,10 +450,6 @@ static void hystart_update(struct sock *sk, u32 delay)
 						 tp->snd_cwnd);
 				tp->snd_ssthresh = tp->snd_cwnd;
 
-				/* TCP-LTE */
-				if(sysctl_tcp_see)
-					printk("cubic hystart hydelay update ssthresh %d\n", tp->snd_ssthresh);
-				/* TCP-LTE */
 			}
 		}
 	}
