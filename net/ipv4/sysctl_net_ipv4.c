@@ -270,14 +270,6 @@ static struct ctl_table ipv4_table[] = {
 		.proc_handler	= proc_dointvec
 	},
     /* begin TCP-LTE */
-	// PRB utilization
-	{
-		.procname	= "tcp_prb",
-		.data		= &sysctl_tcp_prb,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec
-	},
 	// Our own window reduction
 	{
 		.procname	= "tcp_lte",
@@ -306,14 +298,6 @@ static struct ctl_table ipv4_table[] = {
 	{
 		.procname	= "tcp_add",
 		.data		= &sysctl_tcp_add,
-		.maxlen		= sizeof(int),
-		.mode		= 0644,
-		.proc_handler	= proc_dointvec
-	},
-	// tsq algorithm
-	{
-		.procname	= "tcp_tsq",
-		.data		= &sysctl_tcp_tsq,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec

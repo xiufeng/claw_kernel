@@ -320,17 +320,12 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if (!tcp_is_cwnd_limited(sk))
 		return;
 
-	//if (sysctl_tcp_prb<40) {
 	if (1) {//force slow start
 		if (hystart && after(ack, ca->end_seq))
 			bictcp_hystart_reset(sk);
 		
 		acked = tcp_slow_start(tp, acked);
 
-		/* TCP-LTE */
-		if(sysctl_tcp_see==1) 
-			printk("spring slow start win %d, ssthresh %d, acked %d, prb %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, sysctl_tcp_prb);
-		/* TCP-LTE */
 
 		/* TCP-LTE */
 		// force slow start
@@ -360,8 +355,6 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 		printk("manually set win %d\n", tp->snd_cwnd);
 	}
 
-	if(sysctl_tcp_see==1)
-   		printk("spring tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d, prb %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt, sysctl_tcp_prb);
 	/* TCP-LTE */
 }
 
