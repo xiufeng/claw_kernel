@@ -292,6 +292,7 @@ int sysctl_tcp_lte = 0;//use our own rate reduction
 int sysctl_tcp_see = 0;//use our own rate reduction
 int sysctl_tcp_rate = 0;//do not use the fixed window
 int sysctl_tcp_add = 0;// the amount to add is 0 in the beginning
+int sysctl_tcp_tsq = 0;//control whether we bypass tsq or not
 /* end TCP-LTE */
 
 struct percpu_counter tcp_orphan_count;

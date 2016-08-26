@@ -76,10 +76,6 @@ static void tcp_event_new_data_sent(struct sock *sk, const struct sk_buff *skb)
 	unsigned int prior_packets = tp->packets_out;
 
 
-	/* TCP-LTE */
-	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
-		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, prb %d, sock id %d, skb_length %d, data %d, MAC %d, header %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), sysctl_tcp_prb, tp->rabe_sock_id, skb->len, skb->data_len, skb->mac_len, skb->hdr_len);
-	/* TCP-LTE */
 
 	tcp_advance_send_head(sk, skb);
 	tp->snd_nxt = TCP_SKB_CB(skb)->end_seq;
@@ -738,8 +734,8 @@ static void tcp_tsq_handler(struct sock *sk)
 	     TCPF_CLOSE_WAIT  | TCPF_LAST_ACK)){
 
 		/*TCP-LTE*/
-		struct tcp_sock *tp = tcp_sk(sk);
-		tp->xmit_out = 1;
+		//struct tcp_sock *tp = tcp_sk(sk);
+		//tp->xmit_out = 1;
 		/*TCP-LTE*/
 
 		tcp_write_xmit(sk, tcp_current_mss(sk), tcp_sk(sk)->nonagle,
@@ -919,6 +915,7 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	struct tcphdr *th;
 	int err;
 
+
 	BUG_ON(!skb || !tcp_skb_pcount(skb));
 
 	if (clone_it) {
@@ -936,6 +933,11 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	tp = tcp_sk(sk);
 	tcb = TCP_SKB_CB(skb);
 	memset(&opts, 0, sizeof(opts));
+
+	/* TCP-LTE */
+	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
+		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, sock id %d, skb_length %d, sending_queue_size %d, xmit_in%d, xmit_tcp%d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), tp->rabe_sock_id, skb->len, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
+	/* TCP-LTE */
 
 	if (unlikely(tcb->tcp_flags & TCPHDR_SYN))
 		tcp_options_size = tcp_syn_options(sk, skb, &opts, &md5);
@@ -1495,21 +1497,11 @@ static void tcp_cwnd_validate(struct sock *sk, bool is_cwnd_limited)
 		tp->snd_cwnd_used = 0;
 		tp->snd_cwnd_stamp = tcp_time_stamp;
 
-		/* TCP-LTE */
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
-			printk("network is fully feed, cwnd %d\n",tp->snd_cwnd);
-		/* TCP-LTE */
-
 
 	} else {
 		/* Network starves. */
 		if (tp->packets_out > tp->snd_cwnd_used)
 			tp->snd_cwnd_used = tp->packets_out;
-
-		/* TCP-LTE */
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
-			printk("network starves, cwnd %d\n",tp->snd_cwnd);
-		/* TCP-LTE */
 
 		if (sysctl_tcp_slow_start_after_idle &&
 		    (s32)(tcp_time_stamp - tp->snd_cwnd_stamp) >= inet_csk(sk)->icsk_rto)
@@ -2022,6 +2014,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	bool is_cwnd_limited = false;
 	u32 max_segs;
 
+
 	sent_pkts = 0;
 
 	if (!push_one) {
@@ -2035,58 +2028,51 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 	/* TCP-LTE */
-	int cur_buf_rounds;
-	cur_buf_rounds=0;
+	// you may interfere with ssthresh
+	// avoid any interference to non-HTTP traffic
+	if((tp->rabe_sock_id==739)){
+		// avoid any interfeerence when our alg is not on
+		if(sysctl_tcp_lte==1){
+			if(sysctl_tcp_add>0){
+				// add to the last value
+				if(tp->rabe_last_snd_cwnd==0)
+					tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
+				else
+					tp->snd_cwnd = tp->rabe_last_snd_cwnd + sysctl_tcp_add;
+
+
+				if(sysctl_tcp_see==1)
+					printk("new window is %d after adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_add, tp->rabe_last_snd_cwnd);
+				
+				// we can only add once until the next update
+				sysctl_tcp_add = 0;
+				// store current window
+				tp->rabe_last_snd_cwnd = tp->snd_cwnd;
+			}
+			else{
+				//lock the window if there are no resource left
+				//in the very beginning we have add=0, last=0 just bypass it and run cubic
+				if(tp->rabe_last_snd_cwnd!=0){
+					tp->snd_cwnd = tp->rabe_last_snd_cwnd; 
+					printk("lock on the last window %d\n", tp->snd_cwnd);
+				}
+			}
+		}
+		// use fixed window, will flush previous resuts, only for http
+		if(sysctl_tcp_rate!=0)
+			tp->snd_cwnd = sysctl_tcp_rate; 
+	}
 	/* TCP-LTE */
+		
+
 
 	max_segs = tcp_tso_autosize(sk, mss_now);
 	while ((skb = tcp_send_head(sk))) {
 		unsigned int limit;
 	
-		cur_buf_rounds++;
-
 		/* TCP-LTE */
-		//TODO: do not mix window of our connection and others
-		// add the window when we have resources left
-		// in the beginning, we still run slow start
-		// use fixed window
-		if(sysctl_tcp_rate!=0){
-			tp->snd_cwnd = sysctl_tcp_rate; 
-			printk("fixed window boost %d\n", tp->snd_cwnd);
-		}
-		else{
-			/*
-			if((tp->rabe_sock_id==739) && (tp->snd_cwnd>100) && (sysctl_tcp_lte==1)){
-				if(sysctl_tcp_add>0){
-					// add to the last value
-					if(tp->rabe_last_snd_cwnd==0)
-						tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
-					else
-						tp->snd_cwnd = tp->rabe_last_snd_cwnd + sysctl_tcp_add;
-
-
-					if(sysctl_tcp_see==1)
-						printk("new window is %d after adding %d\n", tp->snd_cwnd, sysctl_tcp_add);
-					
-					// we can only add once until the next update
-					sysctl_tcp_add = 0;
-					// store current window
-					tp->rabe_last_snd_cwnd = tp->snd_cwnd;
-				}
-				else{
-					//lock the window if there are no resource left
-					tp->snd_cwnd = tp->rabe_last_snd_cwnd; 
-				}
-			}
-			*/
-		}
-
-		/* TCP-LTE */
-
-		/* TCP-LTE */
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-			printk("snd_cwnd %d, sending_queue_size %d, xmit_in%d, xmit_out%d, xmit_tcp%d\n", tp->snd_cwnd, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_out, tp->xmit_tcp);
-		}
+		//if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
+		//	printk("snd_cwnd %d, sending_queue_size %d, xmit_in%d, xmit_tcp%d\n", tp->snd_cwnd, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
 		/* TCP-LTE */
 
 		tso_segs = tcp_init_tso_segs(sk, skb, mss_now);
@@ -2099,12 +2085,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		}
 
 		cwnd_quota = tcp_cwnd_test(tp, skb);
-
-		/* TCP-LTE */
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-			printk("the sending quota is %d, cwnd %d, clamp %d, max_seges %d\n", cwnd_quota, tp->snd_cwnd, tp->snd_cwnd_clamp, max_segs);
-		}
-		/* TCP-LTE */
 
 		if (!cwnd_quota) {
 			is_cwnd_limited = true;
@@ -2136,14 +2116,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			if (unlikely(!tcp_nagle_test(tp, skb, mss_now,
 						     (tcp_skb_is_last(sk, skb) ?
 						      nonagle : TCP_NAGLE_PUSH)))){
-				//break;
-				/* TCP-LTE */
-				if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-					printk("quit reason3, did not pass the nagle test\n");
-				}
-
 				break;
-				/* TCP-LTE */
 			}
 		} else {
 
@@ -2172,11 +2145,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 		if (skb->len > limit &&
 		    unlikely(tso_fragment(sk, skb, limit, mss_now, gfp))){
-			/* TCP-LTE */
-			if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-				printk("quit reason5, skb greater than limit, skb_len %d, limit %d\n", skb->len, limit);
-			}
-			/* TCP-LTE */
 			break;
 		}
 
@@ -2197,9 +2165,8 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 
 		//disable the limit by using a super large limit
-		if((sysctl_tcp_lte==1)&&(tp->rabe_sock_id==739)){
+		if((sysctl_tcp_tsq==1)&&(tp->rabe_sock_id==739)){
 			limit = sysctl_tcp_limit_output_bytes*10;
-			printk("set super large limit %d\n", limit);
 		}
 		/* TCP-LTE */
 
@@ -2212,11 +2179,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			 */
 			smp_mb__after_atomic();
 			if (atomic_read(&sk->sk_wmem_alloc) > limit){
-				/* TCP-LTE */
-				if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-					printk("quit reason6, tsq, cwnd %d, limit %d, queue %d\n", tp->snd_cwnd, limit, atomic_read(&sk->sk_wmem_alloc));
-				}
-				/* TCP-LTE */
 				break;
 			}
 		}
@@ -2238,9 +2200,11 @@ repair:
 
 
 		/* TCP-LTE */
+		/*
 		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
 			printk("quit reason7, repair, cwnd %d\n", tp->snd_cwnd);
 		}
+		*/
 		/* TCP-LTE */
 
 		if (push_one)
@@ -2254,11 +2218,6 @@ repair:
 	tp->xmit_tcp=0;
 
 
-	if(cur_buf_rounds==0){
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-			printk("tcp_write_xmit has empty buffer\n");
-		}
-	}
 	/* TCP-LTE */
 
 	if (likely(sent_pkts)) {
@@ -2364,7 +2323,7 @@ void tcp_send_loss_probe(struct sock *sk)
 	if (tcp_send_head(sk) != NULL) {
 
 		/*TCP-LTE*/
-		tp->xmit_out=2;
+		//tp->xmit_out=2;
 		/*TCP-LTE*/
 		err = tcp_write_xmit(sk, mss, TCP_NAGLE_OFF, 2, GFP_ATOMIC);
 		goto rearm_timer;
@@ -2427,8 +2386,8 @@ void __tcp_push_pending_frames(struct sock *sk, unsigned int cur_mss,
 		return;
 
 	/*TCP-LTE*/
-	struct tcp_sock *tp = tcp_sk(sk);
-	tp->xmit_out = 3;
+	//struct tcp_sock *tp = tcp_sk(sk);
+	//tp->xmit_out = 3;
 	/*TCP-LTE*/
 
 	if (tcp_write_xmit(sk, cur_mss, nonagle, 0,
@@ -2443,12 +2402,17 @@ void tcp_push_one(struct sock *sk, unsigned int mss_now)
 {
 	struct sk_buff *skb = tcp_send_head(sk);
 
+	/* TCP-LTE */
+	//	we have bug here
+	struct tcp_sock *tp = tcp_sk(sk);
+	if(!skb){
+		printk("error, no skb, cwnd %d, ssthresh %d, source port %u, dst port %u, sock id %d, skb_length %d, xmit_in %d, xmit_tcp %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), tp->rabe_sock_id, skb->len, tp->xmit_in, tp->xmit_tcp);
+	}
+	//tp->xmit_out = 4;
+	/*TCP-LTE*/
+
 	BUG_ON(!skb || skb->len < mss_now);
 
-	/*TCP-LTE*/
-	struct tcp_sock *tp = tcp_sk(sk);
-	tp->xmit_out = 4;
-	/*TCP-LTE*/
 
 	tcp_write_xmit(sk, mss_now, TCP_NAGLE_PUSH, 1, sk->sk_allocation);
 }
