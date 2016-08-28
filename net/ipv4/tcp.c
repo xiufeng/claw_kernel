@@ -404,6 +404,7 @@ void tcp_init_sock(struct sock *sk)
 
 	/* TCP-LTE */
 	tp->rabe_last_snd_cwnd = 0;
+	tp->rabe_sock_id = 0; // used to identify retransmission and ack
 	// the reasons of transmit
 	tp->xmit_in=0;
 	tp->xmit_out=0;

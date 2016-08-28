@@ -159,6 +159,7 @@ static void tcp_cwnd_restart(struct sock *sk, const struct dst_entry *dst)
 	tp->snd_cwnd_used = 0;
 
 
+
 }
 
 /* Congestion state accounting after a packet has been sent. */
@@ -934,6 +935,18 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	tcb = TCP_SKB_CB(skb);
 	memset(&opts, 0, sizeof(opts));
 
+	/* TCP-LTE */
+	//  check the output port after you identify them
+	// the event_data_sent later will rewrite cwnd
+	if(tp->rabe_sock_id!=739){
+		if((sysctl_tcp_see==1)&&(ntohs(inet->inet_sport)==443))
+			printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, sending_queue_size %d, xmit_in %d, xmit_tcp %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(inet->inet_sport), ntohs(inet->inet_dport), skb->len, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
+	}
+	else{
+		tp->rabe_sock_id = 0; // we block the display just for a single call from ack or retransmission
+	}
+	/* TCP-LTE */
+
 
 	if (unlikely(tcb->tcp_flags & TCPHDR_SYN))
 		tcp_options_size = tcp_syn_options(sk, skb, &opts, &md5);
@@ -1009,6 +1022,7 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 
 	icsk->icsk_af_ops->send_check(sk, skb);
 
+
 	if (likely(tcb->tcp_flags & TCPHDR_ACK))
 		tcp_event_ack_sent(sk, tcp_skb_pcount(skb));
 
@@ -1031,11 +1045,6 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 
 	err = icsk->icsk_af_ops->queue_xmit(sk, skb, &inet->cork.fl);
 
-	/* TCP-LTE */
-	//  check the output port after you identify them
-	if((sysctl_tcp_see==1)&&(ntohs(tcp_hdr(skb)->source)==443))
-		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, sending_queue_size %d, xmit_in %d, xmit_tcp %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), skb->len, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
-	/* TCP-LTE */
 
 	if (likely(err <= 0))
 		return err;
@@ -1471,6 +1480,7 @@ static void tcp_cwnd_application_limited(struct sock *sk)
 		if (win_used < tp->snd_cwnd) {
 			tp->snd_ssthresh = tcp_current_ssthresh(sk);
 			tp->snd_cwnd = (tp->snd_cwnd + win_used) >> 1;
+
 		}
 		tp->snd_cwnd_used = 0;
 	}
@@ -1978,6 +1988,7 @@ static int tcp_mtu_probe(struct sock *sk)
 		tp->mtu_probe.probe_seq_end = TCP_SKB_CB(nskb)->end_seq;
 
 
+
 		return 1;
 	}
 
@@ -2030,12 +2041,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 	/* TCP-LTE */
 	// print ports
-	/*
-	if(sysctl_tcp_see==1)
-		printk("xmit fun, source port %u, dst port %u\n", xmit_sport, xmit_dport);
-	*/
-
-	// you may interfere with ssthresh
 	// avoid any interference to non-HTTP traffic
 	if((xmit_sport==443)){
 		// avoid any interfeerence when our alg is not on
@@ -2076,8 +2081,9 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		/* TCP-LTE */
 
 		// use fixed window, will flush previous resuts, only for http
-		if((sysctl_tcp_rate!=0)&&(xmit_sport==443))
+		if((sysctl_tcp_rate!=0)&&(xmit_sport==443)){
 			tp->snd_cwnd = sysctl_tcp_rate; 
+		}
 
 		//if((sysctl_tcp_see==1)&&(xmit_sport==443))
 		//	printk("snd_cwnd %d, sending_queue_size %d, xmit_in%d, xmit_tcp%d\n", tp->snd_cwnd, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
@@ -2108,6 +2114,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				break;
 			}
 		}
+
 
 
 		if (unlikely(!tcp_snd_wnd_test(tp, skb, mss_now))){
@@ -2146,6 +2153,8 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			break;
 		}
 
+
+
 		/* TCP Small Queues :
 		 * Control number of packets in qdisc/devices to two packets / or ~1 ms.
 		 * This allows for :
@@ -2172,6 +2181,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				break;
 			}
 		}
+
 
 
 		//TODO: the transmission code is here
@@ -2699,6 +2709,12 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 	 * and check if ack-trimming & collapsing extended the headroom
 	 * beyond what csum_start can cover.
 	 */
+
+	/* TCP-LTE */
+	tp->rabe_sock_id = 739;
+	if(sysctl_tcp_see==1)
+		printk("retransmission, cwnd %d\n", tp->snd_cwnd);
+	/* TCP-LTE */
 	if (unlikely((NET_IP_ALIGN && ((unsigned long)skb->data & 3)) ||
 		     skb_headroom(skb) >= 0xFFFF)) {
 		struct sk_buff *nskb = __pskb_copy(skb, MAX_TCP_HEADER,
@@ -2942,6 +2958,7 @@ void tcp_send_active_reset(struct sock *sk, gfp_t priority)
 	tcp_init_nondata_skb(skb, tcp_acceptable_seq(sk),
 			     TCPHDR_ACK | TCPHDR_RST);
 	/* Send it off. */
+
 	if (tcp_transmit_skb(sk, skb, 0, priority))
 		NET_INC_STATS(sock_net(sk), LINUX_MIB_TCPABORTFAILED);
 
@@ -2980,6 +2997,7 @@ int tcp_send_synack(struct sock *sk)
 		TCP_SKB_CB(skb)->tcp_flags |= TCPHDR_ACK;
 		tcp_ecn_send_synack(sk, skb);
 	}
+
 	return tcp_transmit_skb(sk, skb, 1, GFP_ATOMIC);
 }
 
@@ -3240,6 +3258,7 @@ static int tcp_send_syn_data(struct sock *sk, struct sk_buff *syn)
 
 	tcp_connect_queue_skb(sk, syn_data);
 
+
 	err = tcp_transmit_skb(sk, syn_data, 1, sk->sk_allocation);
 
 	syn->skb_mstamp = syn_data->skb_mstamp;
@@ -3261,6 +3280,8 @@ fallback:
 	/* Send a regular SYN with Fast Open cookie request option */
 	if (fo->cookie.len > 0)
 		fo->cookie.len = 0;
+
+
 	err = tcp_transmit_skb(sk, syn, 1, sk->sk_allocation);
 	if (err)
 		tp->syn_fastopen = 0;
@@ -3291,6 +3312,8 @@ int tcp_connect(struct sock *sk)
 	tp->retrans_stamp = tcp_time_stamp;
 	tcp_connect_queue_skb(sk, buff);
 	tcp_ecn_send_syn(sk, buff);
+
+
 
 	/* Send off SYN; include data in Fast Open. */
 	err = tp->fastopen_req ? tcp_send_syn_data(sk, buff) :
@@ -3409,6 +3432,16 @@ void tcp_send_ack(struct sock *sk)
 
 	/* Send it off, this clears delayed acks for us. */
 	skb_mstamp_get(&buff->skb_mstamp);
+
+	/* TCP-LTE */
+	struct tcp_sock *tp = tcp_sk(sk);
+	tp->rabe_sock_id = 739;
+	/*
+	if(sysctl_tcp_see==1)
+		printk("sending ack, cwnd %d\n", tp->snd_cwnd);
+	*/
+	/* TCP-LTE */
+
 	tcp_transmit_skb(sk, buff, 0, sk_gfp_atomic(sk, GFP_ATOMIC));
 }
 EXPORT_SYMBOL_GPL(tcp_send_ack);
@@ -3442,6 +3475,7 @@ static int tcp_xmit_probe_skb(struct sock *sk, int urgent)
 	 */
 	tcp_init_nondata_skb(skb, tp->snd_una - !urgent, TCPHDR_ACK);
 	skb_mstamp_get(&skb->skb_mstamp);
+
 	return tcp_transmit_skb(sk, skb, 0, GFP_ATOMIC);
 }
 
@@ -3485,6 +3519,7 @@ int tcp_write_wakeup(struct sock *sk)
 			tcp_set_skb_tso_segs(sk, skb, mss);
 
 		TCP_SKB_CB(skb)->tcp_flags |= TCPHDR_PSH;
+
 		err = tcp_transmit_skb(sk, skb, 1, GFP_ATOMIC);
 		if (!err)
 			tcp_event_new_data_sent(sk, skb);
