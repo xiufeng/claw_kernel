@@ -934,10 +934,6 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	tcb = TCP_SKB_CB(skb);
 	memset(&opts, 0, sizeof(opts));
 
-	/* TCP-LTE */
-	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
-		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, sock id %d, skb_length %d, sending_queue_size %d, xmit_in%d, xmit_tcp%d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), tp->rabe_sock_id, skb->len, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
-	/* TCP-LTE */
 
 	if (unlikely(tcb->tcp_flags & TCPHDR_SYN))
 		tcp_options_size = tcp_syn_options(sk, skb, &opts, &md5);
@@ -1034,6 +1030,12 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 			       sizeof(struct inet6_skb_parm)));
 
 	err = icsk->icsk_af_ops->queue_xmit(sk, skb, &inet->cork.fl);
+
+	/* TCP-LTE */
+	//  check the output port after you identify them
+	if((sysctl_tcp_see==1)&&(ntohs(tcp_hdr(skb)->source)==443))
+		printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, sending_queue_size %d, xmit_in %d, xmit_tcp %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(tcp_hdr(skb)->source), ntohs(tcp_hdr(skb)->dest), skb->len, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
+	/* TCP-LTE */
 
 	if (likely(err <= 0))
 		return err;
@@ -1676,13 +1678,6 @@ static bool tcp_snd_wnd_test(const struct tcp_sock *tp,
 		end_seq = TCP_SKB_CB(skb)->seq + cur_mss;
 
 
-	/* TCP-LTE */
-	/*
-	if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-		printk("snding window test, end_seq %d, tcp_wnd_end %d\n", end_seq, tcp_wnd_end(tp));
-	}
-	*/
-	/* TCP-LTE */
 
 
 	return !after(end_seq, tcp_wnd_end(tp));
@@ -2014,6 +2009,12 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	bool is_cwnd_limited = false;
 	u32 max_segs;
 
+	/* TCP-LTE */
+	struct inet_sock *inet  = inet_sk(sk);
+	u32 xmit_sport		= ntohs(inet->inet_sport);
+	u32 xmit_dport		= ntohs(inet->inet_dport);
+	/* TCP-LTE */
+
 
 	sent_pkts = 0;
 
@@ -2028,9 +2029,15 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 	/* TCP-LTE */
+	// print ports
+	/*
+	if(sysctl_tcp_see==1)
+		printk("xmit fun, source port %u, dst port %u\n", xmit_sport, xmit_dport);
+	*/
+
 	// you may interfere with ssthresh
 	// avoid any interference to non-HTTP traffic
-	if((tp->rabe_sock_id==739)){
+	if((xmit_sport==443)){
 		// avoid any interfeerence when our alg is not on
 		if(sysctl_tcp_lte==1){
 			if(sysctl_tcp_add>0){
@@ -2069,10 +2076,10 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		/* TCP-LTE */
 
 		// use fixed window, will flush previous resuts, only for http
-		if((sysctl_tcp_rate!=0)&&(tp->rabe_sock_id==739))
+		if((sysctl_tcp_rate!=0)&&(xmit_sport==443))
 			tp->snd_cwnd = sysctl_tcp_rate; 
 
-		//if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739))
+		//if((sysctl_tcp_see==1)&&(xmit_sport==443))
 		//	printk("snd_cwnd %d, sending_queue_size %d, xmit_in%d, xmit_tcp%d\n", tp->snd_cwnd, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
 		/* TCP-LTE */
 
@@ -2094,7 +2101,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				cwnd_quota = 1;
 			else{
 				/* TCP-LTE */
-				if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
+				if((sysctl_tcp_see==1)&&(xmit_sport==443)){
 					printk("quit reason1, no quota, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
 				}
 				/* TCP-LTE */
@@ -2182,13 +2189,6 @@ repair:
 		sent_pkts += tcp_skb_pcount(skb);
 
 
-		/* TCP-LTE */
-		/*
-		if((sysctl_tcp_see==1)&&(tp->rabe_sock_id==739)){
-			printk("quit reason7, repair, cwnd %d\n", tp->snd_cwnd);
-		}
-		*/
-		/* TCP-LTE */
 
 		if (push_one)
 			break;
