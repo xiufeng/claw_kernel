@@ -42,6 +42,10 @@
 #include <linux/gfp.h>
 #include <linux/module.h>
 
+/* TCP-LTE */
+#include <linux/jiffies.h>
+/* TCP-LTE */
+
 /* People can turn this off for buggy TCP's found in printers etc. */
 int sysctl_tcp_retrans_collapse __read_mostly = 1;
 
@@ -2024,6 +2028,13 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	struct inet_sock *inet  = inet_sk(sk);
 	u32 xmit_sport		= ntohs(inet->inet_sport);
 	u32 xmit_dport		= ntohs(inet->inet_dport);
+	u32 xmit_daddr		= ntohs(inet->inet_daddr);
+	static u32 last_xmit_dport = 0;
+	static u32 last_xmit_daddr = 0;
+	static int last_snd_cwnd = 0;
+	long int mInterval;
+	static unsigned long t_last = 0;
+	unsigned long t_now;
 	/* TCP-LTE */
 
 
@@ -2040,37 +2051,67 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 	/* TCP-LTE */
-	// print ports
+
 	// avoid any interference to non-HTTP traffic
-	if((xmit_sport==443)){
-		// avoid any interfeerence when our alg is not on
-		if(sysctl_tcp_lte==1){
-			if(sysctl_tcp_add>0){
-				// add to the last value
-				if(tp->rabe_last_snd_cwnd==0)
-					tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
-				else
-					tp->snd_cwnd = tp->rabe_last_snd_cwnd + sysctl_tcp_add;
+	// avoid any interfeerence when our alg is not on
+	if((xmit_sport==443)&&(sysctl_tcp_lte==1)){
+
+		// compute the time interval
+		if(t_last!=0){
+			t_now = jiffies;
+			mInterval = ((long)t_now - (long)t_last) * 1000 / HZ; 
+			// flush last window if the gap is too large (for consecutive tests)
+			if(mInterval>=500)
+				last_snd_cwnd = 0;
+
+			printk("time interval %ld millisec, last window size %d\n", mInterval, last_snd_cwnd);
+
+			// reuse the close window size if destination port is different, 
+			// when we have initialized the port, addr and t_last
+			if((last_xmit_dport!=0)&&(last_xmit_dport!=0)){
+				// if port is not the same but address is the same
+				// reuse the last window only when the time difference is small enough
+				if((last_xmit_dport!=xmit_dport)&&(last_xmit_daddr==xmit_daddr)&&(last_snd_cwnd!=0))
+					tp->snd_cwnd = last_snd_cwnd; 
+			}
+		}
 
 
-				if(sysctl_tcp_see==1)
-					printk("new window is %d after adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_add, tp->rabe_last_snd_cwnd);
-				
-				// we can only add once until the next update
-				sysctl_tcp_add = 0;
-				// store current window
-				tp->rabe_last_snd_cwnd = tp->snd_cwnd;
-			}
-			else{
-				//lock the window if there are no resource left
-				//in the very beginning we have add=0, last=0 just bypass it and run cubic
-				if(tp->rabe_last_snd_cwnd!=0)
-					tp->snd_cwnd = tp->rabe_last_snd_cwnd; 
-				
-			}
+		// update the last port and address after they are used
+		last_xmit_dport = xmit_dport;
+		last_xmit_daddr = xmit_daddr;
+
+		// CLAW window adding
+		if(sysctl_tcp_add>0){
+			// add to the last value
+			if(last_snd_cwnd==0)
+				tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
+			else
+				tp->snd_cwnd = last_snd_cwnd + sysctl_tcp_add;
+
+			// store current time
+			t_last = jiffies;
+
+			if(sysctl_tcp_see==1)
+				printk("new window is %d after adding %d, last %d, last_time %ld\n", tp->snd_cwnd, sysctl_tcp_add, last_snd_cwnd, t_last);
+			
+			// we can only add once until the next update
+			sysctl_tcp_add = 0;
+			// store current window
+			last_snd_cwnd = tp->snd_cwnd;
+
+		}
+		else{
+			//lock the window if there are no resource left
+			//in the very beginning we have add=0, last=0 just bypass it and run cubic
+			if(last_snd_cwnd!=0)
+				tp->snd_cwnd = last_snd_cwnd; 
+			
 		}
 	}
 	/* TCP-LTE */
+
+
 		
 
 
@@ -3398,6 +3439,7 @@ void tcp_send_delayed_ack(struct sock *sk)
 void tcp_send_ack(struct sock *sk)
 {
 	struct sk_buff *buff;
+	struct tcp_sock *tp = tcp_sk(sk);
 
 	/* If we have been reset, we may not send again. */
 	if (sk->sk_state == TCP_CLOSE)
@@ -3434,7 +3476,6 @@ void tcp_send_ack(struct sock *sk)
 	skb_mstamp_get(&buff->skb_mstamp);
 
 	/* TCP-LTE */
-	struct tcp_sock *tp = tcp_sk(sk);
 	tp->rabe_sock_id = 739;
 	/*
 	if(sysctl_tcp_see==1)
