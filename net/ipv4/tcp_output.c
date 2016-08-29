@@ -2027,13 +2027,11 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	/* TCP-LTE */
 	struct inet_sock *inet  = inet_sk(sk);
 	u32 xmit_sport		= ntohs(inet->inet_sport);
-	u32 xmit_dport		= ntohs(inet->inet_dport);
-	u32 xmit_daddr		= ntohs(inet->inet_daddr);
-	static u32 last_xmit_dport = 0;
-	static u32 last_xmit_daddr = 0;
+	//u32 xmit_daddr		= ntohs(inet->inet_daddr);
+	//static u32 last_xmit_daddr = 0; //TODO: no multi-user support for now
 	static int last_snd_cwnd = 0;
-	long int mInterval;
 	static unsigned long t_last = 0;
+	long int mInterval;
 	unsigned long t_now;
 	/* TCP-LTE */
 
@@ -2051,63 +2049,85 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 	/* TCP-LTE */
+	// flush all these values if our algorithm is turned off
+	if(last_snd_cwnd!=0){
+		if(sysctl_tcp_lte==0){
+			last_snd_cwnd=0;
+			t_last=0;
+		}
+	}
+
+	// print the potential window increase
+	// if we add the constraint sysctl_tcp_add==0, then we will not know when we used up resources
+	// TODO: disable it after microbenchmark 1
+	if((sysctl_tcp_see==1)&&(sysctl_tcp_add>-3)&&(sysctl_tcp_add!=0)){
+		if(sysctl_tcp_add==-1)
+			printk("potential idle channel 300\n"); // too idle channel, do not increase, but available 300
+		else if (sysctl_tcp_add==-2)
+			printk("potential busy channel 0\n"); // too idle channel, do not increase, but available 300
+		else
+			printk("potential window increase %d\n", sysctl_tcp_add);
+	}
 
 	// avoid any interference to non-HTTP traffic
-	// avoid any interfeerence when our alg is not on
+	// avoid any interference when our alg is not on
 	if((xmit_sport==443)&&(sysctl_tcp_lte==1)){
 
-		// compute the time interval
+		// lock on to the last value if the time interval is not too large
 		if(t_last!=0){
 			t_now = jiffies;
 			mInterval = ((long)t_now - (long)t_last) * 1000 / HZ; 
 			// flush last window if the gap is too large (for consecutive tests)
-			if(mInterval>=500)
+			if(mInterval>=500){
 				last_snd_cwnd = 0;
+				t_last = 0;
+			}
 
-			printk("time interval %ld millisec, last window size %d\n", mInterval, last_snd_cwnd);
+			if(sysctl_tcp_see==1)
+				printk("time interval %ld millisec, last window size %d\n", mInterval, last_snd_cwnd);
 
 			// reuse the close window size if destination port is different, 
 			// when we have initialized the port, addr and t_last
-			if((last_xmit_dport!=0)&&(last_xmit_dport!=0)){
-				// if port is not the same but address is the same
-				// reuse the last window only when the time difference is small enough
-				if((last_xmit_dport!=xmit_dport)&&(last_xmit_daddr==xmit_daddr)&&(last_snd_cwnd!=0))
-					tp->snd_cwnd = last_snd_cwnd; 
-			}
+			if(last_snd_cwnd!=0)
+				tp->snd_cwnd = last_snd_cwnd; //if the gap is too large, should we reinit?
+			else
+				tp->snd_cwnd = 10; //if the gap is too large, should we reinit?
 		}
-
-
-		// update the last port and address after they are used
-		last_xmit_dport = xmit_dport;
-		last_xmit_daddr = xmit_daddr;
 
 		// CLAW window adding
 		if(sysctl_tcp_add>0){
-			// add to the last value
-			if(last_snd_cwnd==0)
-				tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
-			else
+			// add to the last value if it exits
+			if(last_snd_cwnd!=0)
 				tp->snd_cwnd = last_snd_cwnd + sysctl_tcp_add;
+			else
+				tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
 
 			// store current time
 			t_last = jiffies;
 
 			if(sysctl_tcp_see==1)
-				printk("new window is %d after adding %d, last %d, last_time %ld\n", tp->snd_cwnd, sysctl_tcp_add, last_snd_cwnd, t_last);
+				printk("new window is %d after adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_add, last_snd_cwnd);
 			
-			// we can only add once until the next update
-			sysctl_tcp_add = 0;
 			// store current window
 			last_snd_cwnd = tp->snd_cwnd;
 
 		}
 		else{
-			//lock the window if there are no resource left
-			//in the very beginning we have add=0, last=0 just bypass it and run cubic
+			//lock on to the last value if we have nothing to add
 			if(last_snd_cwnd!=0)
 				tp->snd_cwnd = last_snd_cwnd; 
-			
 		}
+
+
+		//if sysctl_tcp_add has value, we will wipe it after using it
+		// 0 means ininitialized
+		// -1 means the channel is idle now
+		// -2 means no resource limit
+		// -2 means manual blocking after done once
+		// positive number means we have resource
+		if(sysctl_tcp_add!=0)
+			sysctl_tcp_add=-3;
+
 	}
 	/* TCP-LTE */
 
