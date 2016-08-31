@@ -103,12 +103,6 @@ struct bictcp {
 };
 
 
-/* TCP-LTE */
-static u32	curr_rtt_always;	/* the minimum rtt of current round */
-static u8	sample_cnt_always;	/* number of samples to decide curr_rtt */
-/* TCP-LTE */
-
-
 static inline void bictcp_reset(struct bictcp *ca)
 {
 	ca->cnt = 0;
@@ -142,15 +136,6 @@ static inline void bictcp_hystart_reset(struct sock *sk)
 	ca->end_seq = tp->snd_nxt;
 	ca->curr_rtt = 0;
 	ca->sample_cnt = 0;
-
-	/* TCP-LTE */
-	struct inet_sock *inet  = inet_sk(sk);
-	u32 xmit_sport		= ntohs(inet->inet_sport);
-	if(xmit_sport==443){
-		curr_rtt_always = 0;
-		sample_cnt_always = 0;
-	}
-	/* TCP-LTE */
 }
 
 static void bictcp_init(struct sock *sk)
@@ -335,18 +320,11 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	struct bictcp *ca = inet_csk_ca(sk);
 
 	/* TCP-LTE */
-	struct inet_sock *inet  = inet_sk(sk);
-	u32 xmit_sport		= ntohs(inet->inet_sport);
-	u32 xmit_dport		= ntohs(inet->inet_dport);
 	// 1 is slow start (SS)
 	// 2 is congestion avoidance (CA)
 	//static int last_state = 0;
-	if((sysctl_tcp_see)&&(xmit_sport==443)){
-		if(ca->curr_rtt>0)
-			printk("hy slow start, local min %d, global min %d, delay thresh %d, sport %u, dport %u\n", ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3), xmit_sport, xmit_dport);
-		else
-			printk("hy slow start, local min_always %d, global min %d, delay thresh %d, sport %u, dport %u\n", curr_rtt_always, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3), xmit_sport, xmit_dport);
-	}
+	if((sysctl_tcp_see)&&(ntohs(inet_sk(sk)->inet_sport)==443))
+			printk("hy slow start, local min %d, global min %d, delay thresh %d\n", ca->curr_rtt, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
 	/* TCP-LTE */
 
 	if (!tcp_is_cwnd_limited(sk))
@@ -526,18 +504,8 @@ static void bictcp_acked(struct sock *sk, u32 cnt, s32 rtt_us)
 
 
 	/* TCP-LTE */
-	struct inet_sock *inet  = inet_sk(sk);
-	u32 xmit_sport		= ntohs(inet->inet_sport);
-	if ((sample_cnt_always < HYSTART_MIN_SAMPLES)&&(xmit_sport==443)) {
-		if (curr_rtt_always == 0 || curr_rtt_always > delay)
-			curr_rtt_always = delay;
-
-		sample_cnt_always++;
-	}
-
-
-	if((sysctl_tcp_see==1)&&(xmit_sport==443))
-		printk("log_delay %d, cur_always %d, min %d, thresh %d\n", delay, curr_rtt_always, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
+	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443))
+		printk("log_delay %u, min %d, thresh %d\n", delay, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
 	/* TCP-LTE */
 
 	/* hystart triggers when cwnd is larger than some threshold */

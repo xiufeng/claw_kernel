@@ -2987,11 +2987,8 @@ static void tcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 
 	/* TCP-LTE */
-	/*
-	if (sysctl_tcp_see==1){
+	if (sysctl_tcp_see==1)
 		printk("congestion avoidance entry, name %s, acked %d\n", icsk->icsk_ca_ops->name, acked);
-	}
-	*/
 	/* TCP-LTE */
 
 	icsk->icsk_ca_ops->cong_avoid(sk, ack, acked);
@@ -3199,6 +3196,11 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 	}
 
 	rtt_update = tcp_ack_update_rtt(sk, flag, seq_rtt_us, sack_rtt_us);
+
+	/* TCP-LTE */
+	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443))
+		printk("delay_pkt %ld\n",(min_t(ulong, ca_seq_rtt_us, sack_rtt_us)<< 3) / USEC_PER_MSEC);
+	/* TCP-LTE */
 
 	if (flag & FLAG_ACKED) {
 		const struct tcp_congestion_ops *ca_ops
@@ -3475,7 +3477,7 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 	u32 dest_port = ntohs(tcp_hdr(skb)->dest);
 
 	if((sysctl_tcp_see==1)&&(dest_port==443))
-		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, rtt %d, adv_mss is %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, tp->srtt_us, tp->advmss);
+		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, rtt %ld, adv_mss %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, (tp->srtt_us) / USEC_PER_MSEC, tp->advmss);
 	/* TCP-LTE */
 
 
