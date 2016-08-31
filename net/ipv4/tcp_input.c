@@ -2987,8 +2987,10 @@ static void tcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	const struct inet_connection_sock *icsk = inet_csk(sk);
 
 	/* TCP-LTE */
+	/*
 	if (sysctl_tcp_see==1)
 		printk("congestion avoidance entry, name %s, acked %d\n", icsk->icsk_ca_ops->name, acked);
+	*/
 	/* TCP-LTE */
 
 	icsk->icsk_ca_ops->cong_avoid(sk, ack, acked);

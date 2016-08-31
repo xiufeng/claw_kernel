@@ -502,12 +502,6 @@ static void bictcp_acked(struct sock *sk, u32 cnt, s32 rtt_us)
 	if (ca->delay_min == 0 || ca->delay_min > delay)
 		ca->delay_min = delay;
 
-
-	/* TCP-LTE */
-	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443))
-		printk("log_delay %u, min %d, thresh %d\n", delay, ca->delay_min, ca->delay_min + HYSTART_DELAY_THRESH(ca->delay_min >> 3));
-	/* TCP-LTE */
-
 	/* hystart triggers when cwnd is larger than some threshold */
 	if (hystart && tp->snd_cwnd <= tp->snd_ssthresh &&
 	    tp->snd_cwnd >= hystart_low_window)
