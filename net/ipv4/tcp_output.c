@@ -2078,7 +2078,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			t_now = jiffies;
 			mInterval = ((long)t_now - (long)t_last) * 1000 / HZ; 
 			// flush last window if the gap is too large (for consecutive tests)
-			if(mInterval>=500){
+			if(mInterval>=3000){
 				last_snd_cwnd = 0;
 				t_last = 0;
 			}
@@ -2169,7 +2169,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			else{
 				/* TCP-LTE */
 				if((sysctl_tcp_see==1)&&(xmit_sport==443)){
-					printk("quit reason1, no quota, cwnd %d, quota %d\n", tp->snd_cwnd, cwnd_quota);
+					printk("abort reason1, no quota, cwnd %d\n", tp->snd_cwnd);
 				}
 				/* TCP-LTE */
 				break;
