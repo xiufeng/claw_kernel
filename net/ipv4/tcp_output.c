@@ -944,7 +944,7 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	// the event_data_sent later will rewrite cwnd
 	if(tp->rabe_sock_id!=739){
 		if((sysctl_tcp_see==1)&&(ntohs(inet->inet_sport)==443))
-			printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, sending_queue_size %d, xmit_in %d, xmit_tcp %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(inet->inet_sport), ntohs(inet->inet_dport), skb->len, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
+			printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, sending_queue_size %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(inet->inet_sport), ntohs(inet->inet_dport), skb->len, atomic_read(&sk->sk_wmem_alloc));
 	}
 	else{
 		tp->rabe_sock_id = 0; // we block the display just for a single call from ack or retransmission
@@ -2083,8 +2083,10 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				t_last = 0;
 			}
 
+			/*
 			if(sysctl_tcp_see==1)
 				printk("time interval %ld millisec, last window size %d\n", mInterval, last_snd_cwnd);
+			*/
 
 			// reuse the close window size if destination port is different, 
 			// when we have initialized the port, addr and t_last
@@ -2168,9 +2170,11 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				cwnd_quota = 1;
 			else{
 				/* TCP-LTE */
+				/*
 				if((sysctl_tcp_see==1)&&(xmit_sport==443)){
 					printk("abort reason1, no quota, cwnd %d\n", tp->snd_cwnd);
 				}
+				*/
 				/* TCP-LTE */
 				break;
 			}
@@ -2267,11 +2271,9 @@ repair:
 
 	/* TCP-LTE */
 	// clear the reasons
-	tp->xmit_in=0;
-	tp->xmit_out=0;
-	tp->xmit_tcp=0;
-
-
+	//tp->xmit_in=0;
+	//tp->xmit_out=0;
+	//tp->xmit_tcp=0;
 	/* TCP-LTE */
 
 	if (likely(sent_pkts)) {

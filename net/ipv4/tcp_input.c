@@ -2721,7 +2721,7 @@ static void tcp_process_loss(struct sock *sk, int flag, bool is_dupack)
 
 
 			/* TCP-LTE */
-			tp->xmit_in=6;
+			//tp->xmit_in=6;
 			/* TCP-LTE */
 
 			__tcp_push_pending_frames(sk, tcp_current_mss(sk),
@@ -5246,7 +5246,7 @@ void tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 				tcp_ack(sk, skb, 0);
 				__kfree_skb(skb);
 				/* TCP-LTE */
-				tp->xmit_in = 1;
+				//tp->xmit_in = 1;
 				/* TCP-LTE */
 				tcp_data_snd_check(sk);
 				return;
@@ -5314,7 +5314,7 @@ void tcp_rcv_established(struct sock *sk, struct sk_buff *skb,
 				/* Well, only one small jumplet in fast path... */
 				tcp_ack(sk, skb, FLAG_DATA);
 				/* TCP-LTE */
-				tp->xmit_in = 2;
+				//tp->xmit_in = 2;
 				/* TCP-LTE */
 				tcp_data_snd_check(sk);
 				if (!inet_csk_ack_scheduled(sk))
@@ -5357,7 +5357,7 @@ step5:
 	tcp_data_queue(sk, skb);
 
 	/* TCP-LTE */
-	tp->xmit_in = 3;
+	//tp->xmit_in = 3;
 	/* TCP-LTE */
 	tcp_data_snd_check(sk);
 	tcp_ack_snd_check(sk);
@@ -5745,7 +5745,7 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb,
 		__kfree_skb(skb);
 
 		/* TCP-LTE */
-		tp->xmit_in = 4;
+		//tp->xmit_in = 4;
 		/* TCP-LTE */
 		tcp_data_snd_check(sk);
 		return 0;
@@ -5948,7 +5948,7 @@ int tcp_rcv_state_process(struct sock *sk, struct sk_buff *skb,
 	if (sk->sk_state != TCP_CLOSE) {
 
 		/* TCP-LTE */
-		tp->xmit_in = 5;
+		//tp->xmit_in = 5;
 		/* TCP-LTE */
 		tcp_data_snd_check(sk);
 		tcp_ack_snd_check(sk);
