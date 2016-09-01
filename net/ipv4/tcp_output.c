@@ -2098,6 +2098,14 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 		// CLAW window adding
 		if(sysctl_tcp_add>0){
+
+			//scale the last window
+			//in range 0 to 100
+			if(sysctl_tcp_scale>0){
+				last_snd_cwnd = (last_snd_cwnd * sysctl_tcp_scale) /100; 
+			}
+
+
 			// add to the last value if it exits
 			if(last_snd_cwnd!=0)
 				tp->snd_cwnd = last_snd_cwnd + sysctl_tcp_add;
@@ -2107,8 +2115,12 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 			// store current time
 			t_last = jiffies;
 
-			if(sysctl_tcp_see==1)
-				printk("new window is %d after adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_add, last_snd_cwnd);
+			if(sysctl_tcp_see==1){
+				if(sysctl_tcp_scale==0)
+					printk("new window is %d after adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_add, last_snd_cwnd);
+				else
+					printk("new window is %d after scaling %d %% then adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_scale, sysctl_tcp_add, last_snd_cwnd);
+			}
 			
 			// store current window
 			last_snd_cwnd = tp->snd_cwnd;
