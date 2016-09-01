@@ -1,5 +1,6 @@
 import socket
 import sys
+import pickle
 
 # Create a TCP/IP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -10,17 +11,20 @@ print >>sys.stderr, 'starting up on %s port %s' % server_address
 sock.bind(server_address)
 
 while True:
-    print >>sys.stderr, '\nwaiting to receive message'
+    print >>sys.stderr, '\nclaw server waiting to receive message'
     data, address = sock.recvfrom(4096)
+
+    message = pickle.loads(data)
+    snd_cwnd_increase = message[0]
     
     print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
-    print >>sys.stderr, data
+    print >>sys.stderr, 'win increase %d' % (snd_cwnd_increase)
 
     # Open a file
     fo = open("/proc/sys/net/ipv4/tcp_add", "wb")
-    print('before we write')
-    fo.write(data);
-    print('after we write')
+    # sysctl can only write string
+    fo.write(str(snd_cwnd_increase));
+    print('write done')
     # Close opend file
     fo.close()
 
