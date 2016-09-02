@@ -11,7 +11,7 @@ print >>sys.stderr, 'starting up on %s port %s' % server_address
 sock.bind(server_address)
 
 while True:
-    print >>sys.stderr, '\nCQIC server waiting to receive message'
+    print >>sys.stderr, '\nCLAW server waiting to receive message'
     data, address = sock.recvfrom(4096)
 
     message = pickle.loads(data)
@@ -25,7 +25,7 @@ while True:
     # Open a file
     fo = open("/proc/sys/net/ipv4/tcp_rate", "wb")
     # sysctl can only write string
-    fo.write(str(cqic_win));
+    fo.write(str(claw_win));
     print('write done')
     # Close opend file
     fo.close()

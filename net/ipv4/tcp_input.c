@@ -3475,11 +3475,9 @@ static int tcp_ack(struct sock *sk, const struct sk_buff *skb, int flag)
 
 
 	/* TCP-LTE */
-	u32 source_port = ntohs(tcp_hdr(skb)->source);
 	u32 dest_port = ntohs(tcp_hdr(skb)->dest);
-
 	if((sysctl_tcp_see==1)&&(dest_port==443))
-		printk("ack, cwnd %d, ssthresh %d, source port %u, dest port %u, rtt %ld, adv_mss %d\n",tp->snd_cwnd, tp->snd_ssthresh, source_port, dest_port, (tp->srtt_us) / USEC_PER_MSEC, tp->advmss);
+		printk("ack, cwnd %d, ssthresh %d\n",tp->snd_cwnd, tp->snd_ssthresh);
 	/* TCP-LTE */
 
 

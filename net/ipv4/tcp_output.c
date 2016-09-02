@@ -944,7 +944,7 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	// the event_data_sent later will rewrite cwnd
 	if(tp->rabe_sock_id!=739){
 		if((sysctl_tcp_see==1)&&(ntohs(inet->inet_sport)==443))
-			printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, sending_queue_size %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(inet->inet_sport), ntohs(inet->inet_dport), skb->len, atomic_read(&sk->sk_wmem_alloc));
+			printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, snd_queue %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(inet->inet_sport), ntohs(inet->inet_dport), skb->len, atomic_read(&sk->sk_wmem_alloc));
 	}
 	else{
 		tp->rabe_sock_id = 0; // we block the display just for a single call from ack or retransmission
@@ -2025,14 +2025,13 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	u32 max_segs;
 
 	/* TCP-LTE */
-	struct inet_sock *inet  = inet_sk(sk);
-	u32 xmit_sport		= ntohs(inet->inet_sport);
+	u32 xmit_sport		= ntohs(inet_sk(sk)->inet_sport);
 	//u32 xmit_daddr		= ntohs(inet->inet_daddr);
 	//static u32 last_xmit_daddr = 0; //TODO: no multi-user support for now
-	static int last_snd_cwnd = 0;
-	static unsigned long t_last = 0;
-	long int mInterval;
-	unsigned long t_now;
+	//static int last_snd_cwnd = 0;
+	//static unsigned long t_last = 0;
+	//long int mInterval;
+	//unsigned long t_now;
 	/* TCP-LTE */
 
 
@@ -2049,6 +2048,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 	/* TCP-LTE */
+	/*
 	// flush all these values if our algorithm is turned off
 	if(last_snd_cwnd!=0){
 		if(sysctl_tcp_lte==0){
@@ -2083,10 +2083,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				t_last = 0;
 			}
 
-			/*
-			if(sysctl_tcp_see==1)
-				printk("time interval %ld millisec, last window size %d\n", mInterval, last_snd_cwnd);
-			*/
 
 			// reuse the close window size if destination port is different, 
 			// when we have initialized the port, addr and t_last
@@ -2101,9 +2097,8 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 			//scale the last window
 			//in range 0 to 100
-			if(sysctl_tcp_scale>0){
+			if(sysctl_tcp_scale>0)
 				last_snd_cwnd = (last_snd_cwnd * sysctl_tcp_scale) /100; 
-			}
 
 
 			// add to the last value if it exits
@@ -2142,11 +2137,13 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		if(sysctl_tcp_add!=0)
 			sysctl_tcp_add=-3;
 
+		// avoid consecutive scaling
+		if(sysctl_tcp_scale!=0)
+			sysctl_tcp_scale=0;
+
 	}
+	*/
 	/* TCP-LTE */
-
-
-		
 
 
 	max_segs = tcp_tso_autosize(sk, mss_now);
@@ -2156,7 +2153,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		/* TCP-LTE */
 
 		// use fixed window, will flush previous resuts, only for http
-		if((sysctl_tcp_rate!=0)&&(xmit_sport==443)){
+		if((sysctl_tcp_rate>0)&&(xmit_sport==443)){
 			tp->snd_cwnd = sysctl_tcp_rate; 
 		}
 
