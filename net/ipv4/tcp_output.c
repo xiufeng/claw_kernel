@@ -2143,6 +2143,25 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 	}
 	*/
+
+
+
+	// display the resource
+	if((sysctl_tcp_see==1)&&(sysctl_tcp_add>-3)&&(sysctl_tcp_add!=0)){
+		if(sysctl_tcp_add==-1)
+			printk("potential idle ch 400\n"); // too idle channel, do not increase, but available 300
+		else if (sysctl_tcp_add==-2)
+			printk("potential busy ch 0\n"); // too idle channel, do not increase, but available 300
+		else
+			printk("potential win increase %d\n", sysctl_tcp_add);
+
+		//if sysctl_tcp_add has value, we will wipe it after using it
+		// 0 means ininitialized
+		// -1 means the channel is idle now
+		// -2 means no resource limit
+		// -3 means manual blocking after done once
+		sysctl_tcp_add=-3;
+	}
 	/* TCP-LTE */
 
 
@@ -2151,6 +2170,14 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		unsigned int limit;
 	
 		/* TCP-LTE */
+		// init congestion control
+		// only do it for port 443 because we do not want to kill ssh
+		if((sysctl_tcp_lte==1)&&(xmit_sport==443)){
+			tcp_init_congestion_control(sk);
+			//just init once
+			sysctl_tcp_lte=0;
+			printk("congestion control in reinited\n");
+		}
 
 		// use fixed window, will flush previous resuts, only for http
 		if((sysctl_tcp_rate>0)&&(xmit_sport==443)){

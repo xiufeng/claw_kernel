@@ -20,15 +20,18 @@ while True:
     claw_win = message[3]
     
     print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
-    print >>sys.stderr, 'cqic win %d claw wind %d' % (cqic_win, claw_win)
+    print >>sys.stderr, 'remaining %d, cqic win %d claw wind %d' % (snd_cwnd_increase, cqic_win, claw_win)
 
     # Open a file
     fo = open("/proc/sys/net/ipv4/tcp_rate", "wb")
+    fo2 = open("/proc/sys/net/ipv4/tcp_add", "wb")
     # sysctl can only write string
     fo.write(str(claw_win));
+    fo2.write(str(snd_cwnd_increase));
     print('write done')
     # Close opend file
     fo.close()
+    fo2.close()
 
     #ack_message = "ACK of snd_cwnd increase"
     
