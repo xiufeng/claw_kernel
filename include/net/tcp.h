@@ -232,11 +232,12 @@ extern int sysctl_tcp_timestamps;
 extern int sysctl_tcp_window_scaling;
 extern int sysctl_tcp_sack;
 /* begin TCP-LTE */
-extern int sysctl_tcp_lte;
-extern int sysctl_tcp_see;
-extern int sysctl_tcp_rate;
-extern int sysctl_tcp_add;
-extern int sysctl_tcp_scale;
+extern int sysctl_tcp_lte; // our algorithm on or off
+extern int sysctl_tcp_see; // log or not
+extern int sysctl_tcp_rate; // set the window
+extern int sysctl_tcp_add; // display the resource
+extern int sysctl_tcp_reset; // reset the congestion control
+extern int sysctl_tcp_delay; // putoff our algorithm to avoid too less initial measurements
 /* end TCP-LTE */
 extern int sysctl_tcp_fin_timeout;
 extern int sysctl_tcp_keepalive_time;

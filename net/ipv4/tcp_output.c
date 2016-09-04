@@ -43,7 +43,7 @@
 #include <linux/module.h>
 
 /* TCP-LTE */
-#include <linux/jiffies.h>
+//#include <linux/jiffies.h>
 /* TCP-LTE */
 
 /* People can turn this off for buggy TCP's found in printers etc. */
@@ -2026,12 +2026,8 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 	/* TCP-LTE */
 	u32 xmit_sport		= ntohs(inet_sk(sk)->inet_sport);
-	//u32 xmit_daddr		= ntohs(inet->inet_daddr);
-	//static u32 last_xmit_daddr = 0; //TODO: no multi-user support for now
-	//static int last_snd_cwnd = 0;
-	//static unsigned long t_last = 0;
-	//long int mInterval;
-	//unsigned long t_now;
+	static unsigned long t_start = 0;
+	static long int mInterval = 0;
 	/* TCP-LTE */
 
 
@@ -2048,103 +2044,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 	/* TCP-LTE */
-	/*
-	// flush all these values if our algorithm is turned off
-	if(last_snd_cwnd!=0){
-		if(sysctl_tcp_lte==0){
-			last_snd_cwnd=0;
-			t_last=0;
-		}
-	}
-
-	// print the potential window increase
-	// if we add the constraint sysctl_tcp_add==0, then we will not know when we used up resources
-	// TODO: disable it after microbenchmark 1
-	if((sysctl_tcp_see==1)&&(sysctl_tcp_add>-3)&&(sysctl_tcp_add!=0)){
-		if(sysctl_tcp_add==-1)
-			printk("potential idle channel 300\n"); // too idle channel, do not increase, but available 300
-		else if (sysctl_tcp_add==-2)
-			printk("potential busy channel 0\n"); // too idle channel, do not increase, but available 300
-		else
-			printk("potential window increase %d\n", sysctl_tcp_add);
-	}
-
-	// avoid any interference to non-HTTP traffic
-	// avoid any interference when our alg is not on
-	if((xmit_sport==443)&&(sysctl_tcp_lte==1)){
-
-		// lock on to the last value if the time interval is not too large
-		if(t_last!=0){
-			t_now = jiffies;
-			mInterval = ((long)t_now - (long)t_last) * 1000 / HZ; 
-			// flush last window if the gap is too large (for consecutive tests)
-			if(mInterval>=3000){
-				last_snd_cwnd = 0;
-				t_last = 0;
-			}
-
-
-			// reuse the close window size if destination port is different, 
-			// when we have initialized the port, addr and t_last
-			if(last_snd_cwnd!=0)
-				tp->snd_cwnd = last_snd_cwnd; //if the gap is too large, should we reinit?
-			else
-				tp->snd_cwnd = 10; //if the gap is too large, should we reinit?
-		}
-
-		// CLAW window adding
-		if(sysctl_tcp_add>0){
-
-			//scale the last window
-			//in range 0 to 100
-			if(sysctl_tcp_scale>0)
-				last_snd_cwnd = (last_snd_cwnd * sysctl_tcp_scale) /100; 
-
-
-			// add to the last value if it exits
-			if(last_snd_cwnd!=0)
-				tp->snd_cwnd = last_snd_cwnd + sysctl_tcp_add;
-			else
-				tp->snd_cwnd = tp->snd_cwnd + sysctl_tcp_add;
-
-			// store current time
-			t_last = jiffies;
-
-			if(sysctl_tcp_see==1){
-				if(sysctl_tcp_scale==0)
-					printk("new window is %d after adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_add, last_snd_cwnd);
-				else
-					printk("new window is %d after scaling %d %% then adding %d, last %d\n", tp->snd_cwnd, sysctl_tcp_scale, sysctl_tcp_add, last_snd_cwnd);
-			}
-			
-			// store current window
-			last_snd_cwnd = tp->snd_cwnd;
-
-		}
-		else{
-			//lock on to the last value if we have nothing to add
-			if(last_snd_cwnd!=0)
-				tp->snd_cwnd = last_snd_cwnd; 
-		}
-
-
-		//if sysctl_tcp_add has value, we will wipe it after using it
-		// 0 means ininitialized
-		// -1 means the channel is idle now
-		// -2 means no resource limit
-		// -2 means manual blocking after done once
-		// positive number means we have resource
-		if(sysctl_tcp_add!=0)
-			sysctl_tcp_add=-3;
-
-		// avoid consecutive scaling
-		if(sysctl_tcp_scale!=0)
-			sysctl_tcp_scale=0;
-
-	}
-	*/
-
-
 
 	// display the resource
 	if((sysctl_tcp_see==1)&&(sysctl_tcp_add>-3)&&(sysctl_tcp_add!=0)){
@@ -2162,6 +2061,36 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		// -3 means manual blocking after done once
 		sysctl_tcp_add=-3;
 	}
+
+
+	// flush all static values if our algorithm is turned off
+	if((t_start!=0)&&(sysctl_tcp_lte==0)){
+		t_start=0;
+		mInterval=0;
+		printk("reset starting time and interval\n");
+	}
+
+	// init congestion control
+	// only do it for port 443 because we do not want to kill ssh
+	if((sysctl_tcp_reset==1)&&(xmit_sport==443)){
+		tcp_init_congestion_control(sk);
+		//just init once
+		sysctl_tcp_reset=0;
+		printk("congestion control in reinited\n");
+	}
+
+	// update the time interval
+	// we should not start counting from ssh, otherwise it is not used at all
+	if((mInterval<sysctl_tcp_delay)&&(xmit_sport==443)){
+		if(t_start!=0){
+			mInterval = ((long)jiffies - (long)t_start) * 1000 / HZ; 
+			printk("cubic has run for %ldms\n", mInterval);
+		}
+		else{
+			t_start = jiffies;
+			printk("start counting interval\n");
+		}
+	}
 	/* TCP-LTE */
 
 
@@ -2170,22 +2099,9 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		unsigned int limit;
 	
 		/* TCP-LTE */
-		// init congestion control
-		// only do it for port 443 because we do not want to kill ssh
-		if((sysctl_tcp_lte==1)&&(xmit_sport==443)){
-			tcp_init_congestion_control(sk);
-			//just init once
-			sysctl_tcp_lte=0;
-			printk("congestion control in reinited\n");
-		}
-
-		// use fixed window, will flush previous resuts, only for http
-		if((sysctl_tcp_rate>0)&&(xmit_sport==443)){
+		// manually set window, will flush previous resuts, only for http
+		if((sysctl_tcp_rate>0)&&(xmit_sport==443)&&(mInterval>=sysctl_tcp_delay))
 			tp->snd_cwnd = sysctl_tcp_rate; 
-		}
-
-		//if((sysctl_tcp_see==1)&&(xmit_sport==443))
-		//	printk("snd_cwnd %d, sending_queue_size %d, xmit_in%d, xmit_tcp%d\n", tp->snd_cwnd, atomic_read(&sk->sk_wmem_alloc), tp->xmit_in, tp->xmit_tcp);
 		/* TCP-LTE */
 
 		tso_segs = tcp_init_tso_segs(sk, skb, mss_now);

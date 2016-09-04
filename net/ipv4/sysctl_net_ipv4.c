@@ -302,10 +302,18 @@ static struct ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
 	},
-	// our window scaling factor
+	// reset CA
 	{
-		.procname	= "tcp_scale",
-		.data		= &sysctl_tcp_scale,
+		.procname	= "tcp_reset",
+		.data		= &sysctl_tcp_reset,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
+	},
+	// delay claw
+	{
+		.procname	= "tcp_delay",
+		.data		= &sysctl_tcp_delay,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
