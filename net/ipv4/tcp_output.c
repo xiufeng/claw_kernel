@@ -2102,6 +2102,55 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		// manually set window, will flush previous resuts, only for http
 		if((sysctl_tcp_rate>0)&&(xmit_sport==443)&&(mInterval>=sysctl_tcp_delay))
 			tp->snd_cwnd = sysctl_tcp_rate; 
+
+
+
+		// verus algorithm
+		if(sysctl_tcp_verus==1){
+
+			// normal verus protocol
+			int DELTA1=1;
+			int DELTA2=2;
+
+			// 100ms epoch and we are not doing slow start
+			if(((long)jiffies-(long)tp->verus_start)>200){
+				// record the last value
+				if(tp->verus_dmax_last==0)
+					tp->verus_dmax_last = tp->verus_dmax;
+				else
+					tp->verus_dmax_last = 2 * tp->verus_dmax_last/10 + 8 * tp->verus_dmax/10;
+
+				// update the window here
+				// if we are in slow start, should not update
+				if((tp->verus_dmax!=0)&&(tp->verus_dmin!=65535)&&(tp->verus_slowstart==0)){
+
+					if(tp->verus_dest!=0){
+					    if (((long)tp->verus_dmax - (long)tp->verus_dmax_last) > 0){
+						tp->verus_dest = tp->verus_dest-DELTA1;
+					        if(tp->verus_dest<tp->verus_dmin)
+							tp->verus_dest=tp->verus_dmin;
+					    }
+					    else
+						tp->verus_dest += DELTA2;
+					}
+					else
+					    tp->verus_dest = tp->verus_dmin; 
+
+					// map latency to window based on the profile in the verus paper
+					tp->snd_cwnd = (tp->verus_dest/8-10)/2;
+
+					printk("verus, dmin %ld, dmax %ld, dmax_last %ld, est %ld, win %d\n", tp->verus_dmin, tp->verus_dmax, tp->verus_dmax_last, tp->verus_dest, tp->snd_cwnd);
+				}
+
+				// reset starting time min and max
+				tp->verus_start = jiffies;
+				tp->verus_dmin = 65535;
+				tp->verus_dmax = 0;
+			}
+
+		}
+
+
 		/* TCP-LTE */
 
 		tso_segs = tcp_init_tso_segs(sk, skb, mss_now);

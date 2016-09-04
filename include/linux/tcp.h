@@ -227,6 +227,13 @@ struct tcp_sock {
  	//u32	xmit_in;	/* the reason of this xmit		*/
  	//u32	xmit_out;	/* the reason of this xmit		*/
  	//u32	xmit_tcp;	/* the reason of this xmit		*/
+	// verus related parameters
+	unsigned long verus_start;
+	unsigned long verus_dmin;
+	unsigned long verus_dmax;
+	unsigned long verus_dmax_last;
+	unsigned long verus_dest;
+	unsigned long verus_slowstart;
 	/* TCP-LTE */
 
 

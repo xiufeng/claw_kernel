@@ -293,6 +293,7 @@ int sysctl_tcp_rate = 0;//do not use the fixed window
 int sysctl_tcp_add = 0;// the amount to add is 0 in the beginning
 int sysctl_tcp_reset = 0;//reset CA
 int sysctl_tcp_delay = 0;//delay our algorithm
+int sysctl_tcp_verus = 0;//the verus algorithm
 /* end TCP-LTE */
 
 struct percpu_counter tcp_orphan_count;
@@ -413,6 +414,18 @@ void tcp_init_sock(struct sock *sk)
 	tp->xmit_out=0;
 	tp->xmit_tcp=0;
 	*/
+
+	// verus
+	if(sysctl_tcp_verus==1){
+		tp->verus_start = jiffies;
+		tp->verus_dmin = 65535;
+		tp->verus_dmax = 0;
+		tp->verus_dmax_last = 0;
+		tp->verus_dest = 0;
+		tp->verus_slowstart=1;
+	}
+
+
 	/* TCP-LTE */
 
 	/* See draft-stevens-tcpca-spec-01 for discussion of the

@@ -3200,8 +3200,23 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 	rtt_update = tcp_ack_update_rtt(sk, flag, seq_rtt_us, sack_rtt_us);
 
 	/* TCP-LTE */
-	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443))
-		printk("delay_pkt %ld\n",(min_t(ulong, ca_seq_rtt_us, sack_rtt_us)<< 3) / USEC_PER_MSEC);
+	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443)){
+
+		long int mDelay = (min_t(ulong, ca_seq_rtt_us, sack_rtt_us)<< 3) / USEC_PER_MSEC;
+
+		// compute the verus dmin, dmax
+		if(sysctl_tcp_verus==1){
+			// update dmax 
+			if(tp->verus_dmax<mDelay)
+				tp->verus_dmax=mDelay;
+			// update dmin 
+			if(tp->verus_dmin>mDelay)
+				tp->verus_dmin=mDelay;
+		}
+
+
+		printk("delay_pkt %ld\n", mDelay);
+	}
 	/* TCP-LTE */
 
 	if (flag & FLAG_ACKED) {

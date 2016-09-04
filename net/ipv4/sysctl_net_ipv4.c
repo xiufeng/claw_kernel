@@ -318,6 +318,14 @@ static struct ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
 	},
+	// verus algorithm
+	{
+		.procname	= "tcp_verus",
+		.data		= &sysctl_tcp_verus,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
+	},
     /* end TCP-LTE */
 	{
 		.procname	= "tcp_retrans_collapse",

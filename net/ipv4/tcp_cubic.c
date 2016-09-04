@@ -355,6 +355,9 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 		if(sysctl_tcp_see==1) 
 			printk("cubic slow start win %d, ssthresh %d, acked %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked);
 		*/
+		if(sysctl_tcp_verus==1){
+			tp->verus_slowstart=1;
+		}
 		/* TCP-LTE */
 
 
@@ -377,6 +380,9 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if(sysctl_tcp_see==1)
    		printk("cubic tcp_cong_avoid_ai win %d, ssthresh %d, acked %d, ca->cnt %d\n", tp->snd_cwnd, tp->snd_ssthresh, acked, ca->cnt);
 	*/
+	if(sysctl_tcp_verus==1){
+		tp->verus_slowstart=0;
+	}
 	/* TCP-LTE */
 }
 
