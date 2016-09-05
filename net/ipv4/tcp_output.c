@@ -2106,7 +2106,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 
 		// verus algorithm
-		if(sysctl_tcp_verus==1){
+		if(sysctl_tcp_verus>0){
 
 			// normal verus protocol
 
@@ -2123,22 +2123,21 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				if((tp->verus_dmax!=0)&&(tp->verus_dmin!=65535)&&(tp->verus_slowstart==0)){
 
 					if(tp->verus_dest!=0){
-					    int DELTA1=1;
-					    int DELTA2=2;
+					    // use the sysctl variable to carry the step size
 					    int VERUS_R=6;
 					    // equation 4 in the verus paper
 					    if (tp->verus_dmax_last > VERUS_R * tp->verus_dmin) {
-						tp->verus_dest = tp->verus_dest-DELTA2;
+						tp->verus_dest = tp->verus_dest-sysctl_tcp_verus;
 					        if(tp->verus_dest<tp->verus_dmin)
 							tp->verus_dest=tp->verus_dmin;
 					    }
 					    else if (((long)tp->verus_dmax - (long)tp->verus_dmax_last) > 0){
-						tp->verus_dest = tp->verus_dest-DELTA1;
+						tp->verus_dest = tp->verus_dest-sysctl_tcp_verus;
 					        if(tp->verus_dest<tp->verus_dmin)
 							tp->verus_dest=tp->verus_dmin;
 					    }
 					    else
-						tp->verus_dest += DELTA2;
+						tp->verus_dest += sysctl_tcp_verus;
 					}
 					else
 					    tp->verus_dest = tp->verus_dmin; 

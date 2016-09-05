@@ -416,7 +416,7 @@ void tcp_init_sock(struct sock *sk)
 	*/
 
 	// verus
-	if(sysctl_tcp_verus==1){
+	if(sysctl_tcp_verus>0){
 		tp->verus_start = jiffies;
 		tp->verus_dmin = 65535;
 		tp->verus_dmax = 0;
