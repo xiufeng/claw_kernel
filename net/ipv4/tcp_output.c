@@ -942,7 +942,7 @@ static int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb, int clone_it,
 	/* TCP-LTE */
 	//  check the output port after you identify them
 	// the event_data_sent later will rewrite cwnd
-	if(tp->rabe_sock_id!=739){
+	if((tp->rabe_sock_id!=739)&&(tp->rabe_sock_id!=740)){
 		if((sysctl_tcp_see==1)&&(ntohs(inet->inet_sport)==443))
 			printk("snd, cwnd %d, ssthresh %d, source port %u, dst port %u, skb_length %d, snd_queue %d\n",tp->snd_cwnd, tp->snd_ssthresh, ntohs(inet->inet_sport), ntohs(inet->inet_dport), skb->len, atomic_read(&sk->sk_wmem_alloc));
 	}
@@ -2109,8 +2109,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		if(sysctl_tcp_verus==1){
 
 			// normal verus protocol
-			int DELTA1=1;
-			int DELTA2=2;
 
 			// 100ms epoch and we are not doing slow start
 			if(((long)jiffies-(long)tp->verus_start)>200){
@@ -2125,7 +2123,16 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				if((tp->verus_dmax!=0)&&(tp->verus_dmin!=65535)&&(tp->verus_slowstart==0)){
 
 					if(tp->verus_dest!=0){
-					    if (((long)tp->verus_dmax - (long)tp->verus_dmax_last) > 0){
+					    int DELTA1=1;
+					    int DELTA2=2;
+					    int VERUS_R=6;
+					    // equation 4 in the verus paper
+					    if (tp->verus_dmax_last > VERUS_R * tp->verus_dmin) {
+						tp->verus_dest = tp->verus_dest-DELTA2;
+					        if(tp->verus_dest<tp->verus_dmin)
+							tp->verus_dest=tp->verus_dmin;
+					    }
+					    else if (((long)tp->verus_dmax - (long)tp->verus_dmax_last) > 0){
 						tp->verus_dest = tp->verus_dest-DELTA1;
 					        if(tp->verus_dest<tp->verus_dmin)
 							tp->verus_dest=tp->verus_dmin;
@@ -2138,6 +2145,8 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 					// map latency to window based on the profile in the verus paper
 					tp->snd_cwnd = (tp->verus_dest/8-10)/2;
+					// record the last window
+					tp->verus_last_win = tp->snd_cwnd; 
 
 					printk("verus, dmin %ld, dmax %ld, dmax_last %ld, est %ld, win %d\n", tp->verus_dmin, tp->verus_dmax, tp->verus_dmax_last, tp->verus_dest, tp->snd_cwnd);
 				}
@@ -2147,7 +2156,17 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				tp->verus_dmin = 65535;
 				tp->verus_dmax = 0;
 			}
+			else{
+				// lock the window if we are not in slow start
+				if((tp->verus_slowstart==0)&&(tp->verus_last_win>0))
+					tp->snd_cwnd = tp->verus_last_win;
+			}
 
+			//loss
+			//VERUS_M_DECREASE=0.7
+			if(tp->rabe_sock_id==739){
+				tp->snd_cwnd = (tp->snd_cwnd*7)/10;
+			}
 		}
 
 
@@ -3499,7 +3518,8 @@ void tcp_send_ack(struct sock *sk)
 	skb_mstamp_get(&buff->skb_mstamp);
 
 	/* TCP-LTE */
-	tp->rabe_sock_id = 739;
+	// 740 is ack
+	tp->rabe_sock_id = 740;
 	/*
 	if(sysctl_tcp_see==1)
 		printk("sending ack, cwnd %d\n", tp->snd_cwnd);

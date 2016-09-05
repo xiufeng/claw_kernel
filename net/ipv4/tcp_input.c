@@ -3207,7 +3207,8 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 		// compute the verus dmin, dmax
 		if(sysctl_tcp_verus==1){
 			// update dmax 
-			if(tp->verus_dmax<mDelay)
+			// avoid the uninitialized random hue value
+			if((tp->verus_dmax<mDelay)&&(mDelay<65535))
 				tp->verus_dmax=mDelay;
 			// update dmin 
 			if(tp->verus_dmin>mDelay)
