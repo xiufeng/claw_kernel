@@ -330,7 +330,17 @@ static void bictcp_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if (!tcp_is_cwnd_limited(sk))
 		return;
 
-	if (tp->snd_cwnd <= tp->snd_ssthresh) {
+	//if (tp->snd_cwnd <= tp->snd_ssthresh) {
+
+
+	/* TCP-LTE */
+	// when we are not using verus, no way to quit ss using verus
+	if(sysctl_tcp_verus==0){
+		tp->verus_quit_ss=0;
+	}
+	/* TCP-LTE */
+
+	if ((tp->snd_cwnd <= tp->snd_ssthresh)&&(tp->verus_quit_ss==0)) {
 		if (hystart && after(ack, ca->end_seq)){
 			bictcp_hystart_reset(sk);
 

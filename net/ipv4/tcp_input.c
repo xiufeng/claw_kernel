@@ -3206,6 +3206,12 @@ static int tcp_clean_rtx_queue(struct sock *sk, int prior_fackets,
 
 		// compute the verus dmin, dmax
 		if(sysctl_tcp_verus>0){
+
+
+			//quit ss when the latency is large enough
+			if(mDelay>2100)
+				tp->verus_quit_ss=1;
+
 			// update dmax 
 			// avoid the uninitialized random hue value
 			if((tp->verus_dmax<mDelay)&&(mDelay<65535))

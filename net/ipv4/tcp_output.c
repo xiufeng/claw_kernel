@@ -2110,8 +2110,8 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 			// normal verus protocol
 
-			// 100ms epoch and we are not doing slow start
-			if(((long)jiffies-(long)tp->verus_start)>200){
+			// 500ms epoch and we are not doing slow start
+			if(((long)jiffies-(long)tp->verus_start)>500){
 				// record the last value
 				if(tp->verus_dmax_last==0)
 					tp->verus_dmax_last = tp->verus_dmax;
@@ -2154,6 +2154,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 				tp->verus_start = jiffies;
 				tp->verus_dmin = 65535;
 				tp->verus_dmax = 0;
+				tp->verus_quit_ss = 0; // allow it to try ss again
 			}
 			else{
 				// lock the window if we are not in slow start

@@ -424,6 +424,7 @@ void tcp_init_sock(struct sock *sk)
 		tp->verus_dest = 0;
 		tp->verus_slowstart=1;
 		tp->verus_last_win=0;
+		tp->verus_quit_ss=0;
 	}
 
 

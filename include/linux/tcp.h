@@ -235,6 +235,7 @@ struct tcp_sock {
 	unsigned long verus_dest;
 	unsigned long verus_slowstart;
 	u32 verus_last_win;
+	int verus_quit_ss;
 	/* TCP-LTE */
 
 

@@ -18,6 +18,9 @@ while True:
     snd_cwnd_increase = message[0]
     cqic_win = message[1]
     claw_win = message[3]
+
+    if snd_cwnd_increase<100:
+	    print >>sys.stderr, '!!!warning, do you have resource?' 
     
     print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
     print >>sys.stderr, 'remaining %d, cqic win %d claw wind %d' % (snd_cwnd_increase, cqic_win, claw_win)
