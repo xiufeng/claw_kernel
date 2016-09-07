@@ -1,3 +1,4 @@
+from __future__ import division
 import socket
 import sys
 import pickle
@@ -17,6 +18,8 @@ keep_no_resource=0 #if we always have no res, go to Cubic
 keep_full_resource=0 #if we always have full res, go to CLAW
 
 state_change_thresh=3
+no_resource_thresh=10
+full_resource_thresh=200
 
 while True:
     print >>sys.stderr, '\nCLAW server waiting to receive message'
@@ -26,13 +29,21 @@ while True:
     snd_cwnd_increase = message[0]
     cqic_win = message[1]
     claw_win = message[3]
+    rsrq_used = message[4]
+    rsrq_used_self = message[5]
+
+    # compute the use ratio
+    if(rsrq_used>0):
+	    use_ratio = rsrq_used_self/rsrq_used 
+    else:
+	    use_ratio = -1 
 
 
     #state criteria
-    if snd_cwnd_increase<20: # no resource
+    if snd_cwnd_increase<no_resource_thresh: # no resource
 	keep_no_resource=keep_no_resource+1
 	keep_full_resource=0
-    elif snd_cwnd_increase>200:
+    elif snd_cwnd_increase>full_resource_thresh:
 	keep_full_resource=keep_full_resource+1
 	keep_no_resource=0
     else:
@@ -60,8 +71,17 @@ while True:
         print >>sys.stderr, 'CLAW off' 
 
 	# turn on fallbacok
+	# if other use takes too many, we should go to aggressive fallback
+	if use_ratio<0.8:
+		fallback_mode=100
+		print >>sys.stderr, 'fallback to slow start, self use ratio %f' % (use_ratio) 
+	else:
+		fallback_mode=1
+		print >>sys.stderr, 'fallback to congestion avoidance, self use ratio %f' % (use_ratio) 
+
+
 	fo2 = open("/proc/sys/net/ipv4/tcp_fallback", "wb")
-	fo2.write(str(1));
+	fo2.write(str(fallback_mode));
 	fo2.close()
         print >>sys.stderr, 'fallback on' 
 
@@ -75,7 +95,7 @@ while True:
 
     
     print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
-    print >>sys.stderr, 'remaining %d, cqic win %d claw win %d, keep no %d, keep full %d cur state %d, last state %d' % (snd_cwnd_increase, cqic_win, claw_win, keep_no_resource, keep_full_resource, cur_state, last_state)
+    print >>sys.stderr, 'remaining %d, cqic win %d claw win %d, keep no %d, keep full %d cur state %d, last state %d, self use %d, self use ratio %f' % (snd_cwnd_increase, cqic_win, claw_win, keep_no_resource, keep_full_resource, cur_state, last_state, rsrq_used_self, use_ratio)
 
     # write tcp_rate only in CLAW state
     if cur_state==1:

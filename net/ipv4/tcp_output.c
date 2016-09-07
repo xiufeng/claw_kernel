@@ -2081,9 +2081,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 
 	//fallback mode
-	if((sysctl_tcp_fallback==1)&&(xmit_sport==443)){
-		//just fallback once
-		sysctl_tcp_fallback=0;
+	if((sysctl_tcp_fallback>0)&&(xmit_sport==443)){
 
 		//remember the window before we flush it
 		u32 tmp_win = tp->snd_cwnd;
@@ -2093,9 +2091,21 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 		//set slow start theshold to current window, directly go to congestion avoidance
 		tp->snd_cwnd = tmp_win;
-		tp->snd_ssthresh=tmp_win;
+
+		//we should go to slow start rather than congestion avoidance
+		//when our user used subframe is only a very small fraction of the total usage
+		if(sysctl_tcp_fallback==100)
+			tp->snd_ssthresh=65535;//slow start
+		else
+			tp->snd_ssthresh=tmp_win;//congestion avodance
 
 		printk("congestion control fall back to Cubic with ssthresh %d\n", tp->snd_ssthresh);
+
+		//just fallback once
+		sysctl_tcp_fallback=0;
+
+		//disable you algorithm after you fallback
+		sysctl_tcp_lte=0;
 	}
 
 	// update the time interval
