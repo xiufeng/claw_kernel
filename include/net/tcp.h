@@ -239,6 +239,7 @@ extern int sysctl_tcp_add; // display the resource
 extern int sysctl_tcp_reset; // reset the congestion control
 extern int sysctl_tcp_delay; // putoff our algorithm to avoid too less initial measurements
 extern int sysctl_tcp_verus; // the verus algorithm
+extern int sysctl_tcp_fallback; // fall back to conventional Cubic
 /* end TCP-LTE */
 extern int sysctl_tcp_fin_timeout;
 extern int sysctl_tcp_keepalive_time;

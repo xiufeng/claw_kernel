@@ -2079,6 +2079,25 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		printk("congestion control in reinited\n");
 	}
 
+
+	//fallback mode
+	if((sysctl_tcp_fallback==1)&&(xmit_sport==443)){
+		//just fallback once
+		sysctl_tcp_fallback=0;
+
+		//remember the window before we flush it
+		u32 tmp_win = tp->snd_cwnd;
+
+		//initialize cc
+		tcp_init_congestion_control(sk);
+
+		//set slow start theshold to current window, directly go to congestion avoidance
+		tp->snd_cwnd = tmp_win;
+		tp->snd_ssthresh=tmp_win;
+
+		printk("congestion control fall back to Cubic with ssthresh %d\n", tp->snd_ssthresh);
+	}
+
 	// update the time interval
 	// we should not start counting from ssh, otherwise it is not used at all
 	if((mInterval<sysctl_tcp_delay)&&(xmit_sport==443)){
@@ -2100,7 +2119,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	
 		/* TCP-LTE */
 		// manually set window, will flush previous resuts, only for http
-		if((sysctl_tcp_rate>0)&&(xmit_sport==443)&&(mInterval>=sysctl_tcp_delay))
+		if((sysctl_tcp_rate>0)&&(xmit_sport==443)&&(mInterval>=sysctl_tcp_delay)&&(sysctl_tcp_lte==1))
 			tp->snd_cwnd = sysctl_tcp_rate; 
 
 

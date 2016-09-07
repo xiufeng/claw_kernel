@@ -294,6 +294,7 @@ int sysctl_tcp_add = 0;// the amount to add is 0 in the beginning
 int sysctl_tcp_reset = 0;//reset CA
 int sysctl_tcp_delay = 0;//delay our algorithm
 int sysctl_tcp_verus = 0;//the verus algorithm
+int sysctl_tcp_fallback = 0;//fallback to cubic
 /* end TCP-LTE */
 
 struct percpu_counter tcp_orphan_count;

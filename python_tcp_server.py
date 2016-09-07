@@ -11,7 +11,7 @@ print >>sys.stderr, 'starting up on %s port %s' % server_address
 sock.bind(server_address)
 
 while True:
-    print >>sys.stderr, '\nCLAW server waiting to receive message'
+    print >>sys.stderr, '\nConventional server waiting to receive message'
     data, address = sock.recvfrom(4096)
 
     message = pickle.loads(data)
