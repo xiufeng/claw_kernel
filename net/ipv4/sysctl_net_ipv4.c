@@ -334,6 +334,14 @@ static struct ctl_table ipv4_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec
 	},
+	// loss mode
+	{
+		.procname	= "rlc_loss",
+		.data		= &sysctl_rlc_loss,
+		.maxlen		= sizeof(int),
+		.mode		= 0644,
+		.proc_handler	= proc_dointvec
+	},
     /* end TCP-LTE */
 	{
 		.procname	= "tcp_retrans_collapse",

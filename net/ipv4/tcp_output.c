@@ -2079,6 +2079,13 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		printk("congestion control in reinited\n");
 	}
 
+	// loss mode
+	if((sysctl_rlc_loss==1)&&(xmit_sport==443)){
+		//just init once
+		sysctl_rlc_loss=0;
+		printk("rlc loss detected\n");
+	}
+
 
 	//fallback mode
 	if((sysctl_tcp_fallback>0)&&(xmit_sport==443)){
