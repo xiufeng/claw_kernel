@@ -2095,7 +2095,7 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 		//we should go to slow start rather than congestion avoidance
 		//when our user used subframe is only a very small fraction of the total usage
 		if(sysctl_tcp_fallback==100)
-			tp->snd_ssthresh=65535;//slow start
+			tp->snd_ssthresh=1000;//slow start
 		else
 			tp->snd_ssthresh=tmp_win;//congestion avodance
 

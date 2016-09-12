@@ -17,9 +17,11 @@ last_state=1 # use CLAW by default
 keep_no_resource=0 #if we always have no res, go to Cubic
 keep_full_resource=0 #if we always have full res, go to CLAW
 
-state_change_thresh=3
-no_resource_thresh=10
+state_change_thresh=2
+no_resource_thresh=50
 full_resource_thresh=200
+
+last_claw_win=0
 
 while True:
     print >>sys.stderr, '\nCLAW server waiting to receive message'
@@ -31,6 +33,7 @@ while True:
     claw_win = message[3]
     rsrq_used = message[4]
     rsrq_used_self = message[5]
+    new_win = int(message[6])
 
     # compute the use ratio
     if(rsrq_used>0):
@@ -41,7 +44,11 @@ while True:
 
     #state criteria
     if snd_cwnd_increase<no_resource_thresh: # no resource
-	keep_no_resource=keep_no_resource+1
+        #do not count resources if we are on the idle channel
+	if snd_cwnd_increase==-1:
+		keep_no_resource=0
+	else:
+		keep_no_resource=keep_no_resource+1
 	keep_full_resource=0
     elif snd_cwnd_increase>full_resource_thresh:
 	keep_full_resource=keep_full_resource+1
@@ -49,6 +56,7 @@ while True:
     else:
 	keep_full_resource=0
 	keep_no_resource=0
+
 
     #state transfter
     if keep_no_resource>state_change_thresh and cur_state==1:
@@ -64,26 +72,32 @@ while True:
 	
     #state change from CLAW to Cubic
     if cur_state==0 and last_state==1:
-	# turn off tcp_lte
-	fo = open("/proc/sys/net/ipv4/tcp_lte", "wb")
-	fo.write(str(0));
-	fo.close()
-        print >>sys.stderr, 'CLAW off' 
 
 	# turn on fallbacok
 	# if other use takes too many, we should go to aggressive fallback
 	if use_ratio<0.8:
-		fallback_mode=100
-		print >>sys.stderr, 'fallback to slow start, self use ratio %f' % (use_ratio) 
+		#fallback_mode=100
+		#print >>sys.stderr, 'fallback to slow start, self use ratio %f' % (use_ratio) 
+		fallback_mode=0
+		cur_state=1
+		print >>sys.stderr, 'no fallback, self use ratio %f' % (use_ratio) 
 	else:
-		fallback_mode=1
-		print >>sys.stderr, 'fallback to congestion avoidance, self use ratio %f' % (use_ratio) 
+		fallback_mode=0
+		cur_state=1
+		print >>sys.stderr, 'no fallback, self use ratio %f' % (use_ratio) 
 
 
 	fo2 = open("/proc/sys/net/ipv4/tcp_fallback", "wb")
 	fo2.write(str(fallback_mode));
 	fo2.close()
-        print >>sys.stderr, 'fallback on' 
+        #print >>sys.stderr, 'fallback on' 
+
+	# turn off tcp_lte
+	if cur_state==0:
+		fo = open("/proc/sys/net/ipv4/tcp_lte", "wb")
+		fo.write(str(0));
+		fo.close()
+		print >>sys.stderr, 'CLAW off' 
 
     #state change from Cubic to CLAW
     if cur_state==1 and last_state==0:
@@ -99,11 +113,16 @@ while True:
 
     # write tcp_rate only in CLAW state
     if cur_state==1:
+	    # lock the window
+	    #if(claw_win<0.4*last_claw_win):
+	#	claw_win=last_claw_win
+		
 	    # Open a file
 	    fo = open("/proc/sys/net/ipv4/tcp_rate", "wb")
 	    # sysctl can only write string
 	    fo.write(str(claw_win));
-	    print('write done')
+	    #fo.write(str(new_win));
+	    print >>sys.stderr, 'write, claw win %f' % (claw_win) 
 	    # Close opend file
 	    fo.close()
 
@@ -114,6 +133,7 @@ while True:
 
     #update the last state
     last_state=cur_state
+    last_claw_win=claw_win
 
     #ack_message = "ACK of snd_cwnd increase"
     
