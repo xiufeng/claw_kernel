@@ -237,7 +237,6 @@ extern int sysctl_tcp_see; // log or not
 extern int sysctl_tcp_rate; // set the window
 extern int sysctl_tcp_add; // display the resource
 extern int sysctl_tcp_reset; // reset the congestion control
-extern int sysctl_tcp_delay; // putoff our algorithm to avoid too less initial measurements
 extern int sysctl_tcp_verus; // the verus algorithm
 extern int sysctl_tcp_fallback; // fall back to conventional Cubic
 extern int sysctl_rlc_loss; // loss detection

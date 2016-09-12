@@ -2026,8 +2026,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 
 	/* TCP-LTE */
 	u32 xmit_sport		= ntohs(inet_sk(sk)->inet_sport);
-	static unsigned long t_start = 0;
-	static long int mInterval = 0;
 	/* TCP-LTE */
 
 
@@ -2063,13 +2061,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 
-	// flush all static values if our algorithm is turned off
-	if((t_start!=0)&&(sysctl_tcp_lte==0)){
-		t_start=0;
-		mInterval=0;
-		printk("reset starting time and interval\n");
-	}
-
 	// init congestion control
 	// only do it for port 443 because we do not want to kill ssh
 	if((sysctl_tcp_reset==1)&&(xmit_sport==443)){
@@ -2087,46 +2078,6 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	}
 
 
-	//fallback mode
-	if((sysctl_tcp_fallback>0)&&(xmit_sport==443)){
-
-		//remember the window before we flush it
-		u32 tmp_win = tp->snd_cwnd;
-
-		//initialize cc
-		tcp_init_congestion_control(sk);
-
-		//set slow start theshold to current window, directly go to congestion avoidance
-		tp->snd_cwnd = tmp_win;
-
-		//we should go to slow start rather than congestion avoidance
-		//when our user used subframe is only a very small fraction of the total usage
-		if(sysctl_tcp_fallback==100)
-			tp->snd_ssthresh=1000;//slow start
-		else
-			tp->snd_ssthresh=tmp_win;//congestion avodance
-
-		printk("congestion control fall back to Cubic with ssthresh %d\n", tp->snd_ssthresh);
-
-		//just fallback once
-		sysctl_tcp_fallback=0;
-
-		//disable you algorithm after you fallback
-		sysctl_tcp_lte=0;
-	}
-
-	// update the time interval
-	// we should not start counting from ssh, otherwise it is not used at all
-	if((mInterval<sysctl_tcp_delay)&&(xmit_sport==443)){
-		if(t_start!=0){
-			mInterval = ((long)jiffies - (long)t_start) * 1000 / HZ; 
-			printk("cubic has run for %ldms\n", mInterval);
-		}
-		else{
-			t_start = jiffies;
-			printk("start counting interval\n");
-		}
-	}
 	/* TCP-LTE */
 
 
@@ -2136,8 +2087,12 @@ static bool tcp_write_xmit(struct sock *sk, unsigned int mss_now, int nonagle,
 	
 		/* TCP-LTE */
 		// manually set window, will flush previous resuts, only for http
-		if((sysctl_tcp_rate>0)&&(xmit_sport==443)&&(mInterval>=sysctl_tcp_delay)&&(sysctl_tcp_lte==1))
-			tp->snd_cwnd = sysctl_tcp_rate; 
+		if((sysctl_tcp_rate>0)&&(xmit_sport==443)&&(sysctl_tcp_lte==1)){
+			if(sysctl_tcp_fallback>0)
+				tp->snd_cwnd = max(tp->snd_cwnd, sysctl_tcp_rate); // we always has a cubic running 
+			else
+				tp->snd_cwnd = sysctl_tcp_rate; //self occupy all resources, avoid futher increasing 
+	        }
 
 
 
