@@ -2521,6 +2521,7 @@ static void tcp_cwnd_reduction(struct sock *sk, const int prior_unsacked,
 	int newly_acked_sacked = prior_unsacked -
 				 (tp->packets_out - tp->sacked_out);
 
+
 	tp->prr_delivered += newly_acked_sacked;
 	if (tcp_packets_in_flight(tp) > tp->snd_ssthresh) {
 		u64 dividend = (u64)tp->snd_ssthresh * tp->prr_delivered +
@@ -2534,6 +2535,11 @@ static void tcp_cwnd_reduction(struct sock *sk, const int prior_unsacked,
 
 	sndcnt = max(sndcnt, (fast_rexmit ? 1 : 0));
 	tp->snd_cwnd = tcp_packets_in_flight(tp) + sndcnt;
+
+	/* TCP-LTE */
+	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443))
+		printk("reduce cwnd to %d, prior_unsacked %d, sacked_out %d\n", tp->snd_cwnd, prior_unsacked, tp->sacked_out);
+	/* TCP-LTE */
 }
 
 static inline void tcp_end_cwnd_reduction(struct sock *sk)
@@ -2808,7 +2814,10 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 
 
 	/* TCP-LTE */
-	//printk("beginning of fast retrans alert, cwnd %d\n",tp->snd_cwnd);
+	/*
+	if((sysctl_tcp_see==1)&&(ntohs(inet_sk(sk)->inet_sport)==443))
+		printk("beginning of fast retrans alert, cwnd %d, sacked_out %d\n",tp->snd_cwnd, tp->sacked_out);
+	*/
 	/* TCP-LTE */
 
 
@@ -2858,6 +2867,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 			}
 
 			tcp_end_cwnd_reduction(sk);
+
 
 			break;
 		}
@@ -2925,6 +2935,7 @@ static void tcp_fastretrans_alert(struct sock *sk, const int acked,
 		tcp_update_scoreboard(sk, fast_rexmit);
 
 	tcp_cwnd_reduction(sk, prior_unsacked, fast_rexmit);
+
 
 	tcp_xmit_retransmit_queue(sk);
 }
