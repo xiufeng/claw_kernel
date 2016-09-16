@@ -26,7 +26,6 @@ while True:
     claw_win = message[3]
     rsrq_used = message[4]
     rsrq_used_self = message[5]
-    new_win = int(message[6])
 
     # compute the use ratio
     # if the channel is idle, no way to fall back
@@ -67,7 +66,6 @@ while True:
     fo = open("/proc/sys/net/ipv4/tcp_rate", "wb")
     # sysctl can only write string
     fo.write(str(claw_win));
-    #fo.write(str(new_win));
     print >>sys.stderr, 'write, claw win %f' % (claw_win) 
     # Close opend file
     fo.close()
