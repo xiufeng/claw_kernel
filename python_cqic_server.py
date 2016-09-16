@@ -10,6 +10,9 @@ server_address = ('0.0.0.0', 23456)
 print >>sys.stderr, 'starting up on %s port %s' % server_address
 sock.bind(server_address)
 
+init_time=0
+uptime_seconds=0
+
 while True:
     print >>sys.stderr, '\nCQIC server waiting to receive message'
     data, address = sock.recvfrom(4096)
@@ -21,6 +24,22 @@ while True:
     
     print >>sys.stderr, 'received %s bytes from %s' % (len(data), address)
     print >>sys.stderr, 'remaining %d, cqic win %d claw wind %d' % (snd_cwnd_increase, cqic_win, claw_win)
+
+    if init_time==0:
+	    # get current time
+	    with open('/proc/uptime', 'r') as f:
+		init_time = float(f.readline().split()[0])
+    		print >>sys.stderr, 'init time %f' % (init_time)
+    else:
+	    # get current time
+	    with open('/proc/uptime', 'r') as f:
+		uptime_seconds = float(f.readline().split()[0])
+    		print >>sys.stderr, 'current time %f' % (uptime_seconds)
+
+    # for the first second, run slow start
+    if((uptime_seconds-init_time)<0):
+	cqic_win=0
+	print >>sys.stderr, 'no QUIC, current time %f' % (uptime_seconds)
 
     # Open a file
     fo = open("/proc/sys/net/ipv4/tcp_rate", "wb")

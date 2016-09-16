@@ -13,7 +13,8 @@ sock.bind(server_address)
 
 fallback_thresh=0.7
 fallback_intensity=0
-fallback_intensity_thresh=3
+fallback_intensity_thresh=10000
+fallback_mode=0
 
 while True:
     print >>sys.stderr, '\nCLAW server waiting to receive message'
@@ -36,12 +37,15 @@ while True:
 
     # if other use takes too many, we should go to aggressive fallback
     # if claw is aggressive, no way to fall back
-    if use_ratio<fallback_thresh and use_ratio>0 and claw_win<100:
+    # if our user is idle, no fallback
+    if use_ratio<fallback_thresh and use_ratio>0 and claw_win<100 and claw_win>0:
 	fallback_intensity = fallback_intensity+1
 	if fallback_intensity>fallback_intensity_thresh: 
 		fallback_mode=1
 		fallback_intensity=0
-		print >>sys.stderr, 'fallback on, self use ratio %f' % (use_ratio) 
+		print >>sys.stderr, 'do_fallback, self use ratio %f' % (use_ratio) 
+	else:
+		fallback_mode=0
     else:
 	fallback_mode=0
 	fallback_intensity=0
